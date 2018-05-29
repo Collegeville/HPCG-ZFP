@@ -23,6 +23,7 @@
 #include <cassert>
 #include <cstdlib>
 #include "Geometry.hpp"
+#include "zfparray3.h"
 
 struct Vector_STRUCT {
   local_int_t localLength;  //!< length of local portion of the vector
@@ -109,6 +110,12 @@ inline void DeleteVector(Vector & v) {
 
   delete [] v.values;
   v.localLength = 0;
+
+  if (v.optimizationData != (void*)0) {
+    delete (zfp::array3d*)v.optimizationData;
+    v.optimizationData = (void*)0;
+  }
+
   return;
 }
 

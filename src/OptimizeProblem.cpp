@@ -19,11 +19,32 @@
  */
 
 #include "OptimizeProblem.hpp"
+#include <cassert>
+#include "zfparray3.h"
+
+double optimization_allocation = 0.0;
+
+
+/*!
+  helper function to create ZFP arrays for vectors
+
+  @param[inout] vect   The vector to create a zfp array for
+
+  @return returns the number of bytes used for the array
+*/
+int CreateZFPArray(Vector & vect, local_int_t nx, local_int_t ny, local_int_t nz){
+  assert(vect.localLength == nx*ny*nz);
+  zfp::array3d * arr = new zfp::array3d(nx, ny, nz, 32, vect.values);
+  vect.optimizationData = arr;
+  return sizeof(&arr) + arr->compressed_size() + arr->cache_size();
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
 
-  @param[inout] A      The known system matrix, also contains the MG hierarchy in attributes Ac and mgData.
+  @param[inout] A      The kno, geom.nx, geom.ny, geom.nz);wn system matrix, also contains the MG hierarchy in attributes Ac and mgData.
   @param[inout] data   The data structure with all necessary CG vectors preallocated
   @param[inout] b      The known right hand side vector
   @param[inout] x      The solution vector to be computed in future CG iteration
@@ -36,7 +57,7 @@
 */
 int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vector & xexact) {
 
-  // This function can be used to completely transform any part of the data structures.
+  // This function can be used to completelylocal_int_t transform any part of the data structures.
   // Right now it does nothing, so compiling with a check for unused variables results in complaints
 
 #if defined(HPCG_USE_MULTICOLORING)
@@ -95,12 +116,54 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  double bytes_used = 0;
+  Geometry & geom = *(A.geom);
+
+  local_int_t nx = geom.nx;
+  local_int_t ny = geom.ny;
+  local_int_t nz = geom.nz;
+
+  bytes_used += CreateZFPArray(b, nx, ny, nz);
+  bytes_used += CreateZFPArray(x, nx, ny, nz);
+  bytes_used += CreateZFPArray(xexact, nx, ny, nz);
+  bytes_used += CreateZFPArray(data.r, nx, ny, nz);
+  bytes_used += CreateZFPArray(data.Ap, nx, ny, nz);
+
+  //have additional values from the halo
+  nx = nx + (geom.npx == 1?0:(geom.ipx == 0 || geom.ipx == geom.npx-1?1:2));
+  ny = ny + (geom.npx == 1?0:(geom.ipy == 0 || geom.ipy == geom.npy-1?1:2));
+  nz = nz + (geom.npx == 1?0:(geom.ipz == 0 || geom.ipz == geom.npz-1?1:2));
+
+  bytes_used += CreateZFPArray(data.p, nx, ny, nz);
+  bytes_used += CreateZFPArray(data.z, nx, ny, nz);
+
+  SparseMatrix * Anext = &A;
+
+  while (Anext) {
+    if (Anext->mgData) {
+
+      bytes_used += CreateZFPArray(*Anext->mgData->Axf, nx, ny, nz);
+
+      geom = *(Anext->Ac->geom);
+
+      bytes_used += CreateZFPArray(*Anext->mgData->rc, geom.nx, geom.ny, geom.nz);
+
+      nx = geom.nx + (geom.npx == 1?0:(geom.ipx == 0 || geom.ipx == geom.npx-1?1:2));
+      ny = geom.ny + (geom.npx == 1?0:(geom.ipy == 0 || geom.ipy == geom.npy-1?1:2));
+      nz = geom.nz + (geom.npx == 1?0:(geom.ipz == 0 || geom.ipz == geom.npz-1?1:2));
+
+      bytes_used += CreateZFPArray(*Anext->mgData->xc, nx, ny, nz);
+    }
+    Anext = Anext->Ac;
+  }
+  optimization_allocation = bytes_used;
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimization_allocation;
 
 }

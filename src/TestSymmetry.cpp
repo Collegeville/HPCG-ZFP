@@ -39,6 +39,8 @@ using std::endl;
 #include "SparseMatrix.hpp"
 #include "TestSymmetry.hpp"
 
+#include "OptimizeProblem.hpp"
+
 /*!
   Tests symmetry-preserving properties of the sparse matrix vector multiply and
   symmetric Gauss-Siedel routines.
@@ -76,6 +78,11 @@ int TestSymmetry(SparseMatrix & A, Vector & b, Vector & xexact, TestSymmetryData
  // First load vectors with random values
  FillRandomVector(x_ncol);
  FillRandomVector(y_ncol);
+
+ //Need optimization applied to be able to use the custom CG impl
+ CreateZFPArray(x_ncol, *A.mgData->Axf);
+ CreateZFPArray(y_ncol, x_ncol);
+ CreateZFPArray(z_ncol, y_ncol);
 
  double xNorm2, yNorm2;
  double ANorm = 2 * 26.0;
@@ -137,4 +144,3 @@ int TestSymmetry(SparseMatrix & A, Vector & b, Vector & xexact, TestSymmetryData
 
  return 0;
 }
-

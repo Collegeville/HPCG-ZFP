@@ -18,6 +18,15 @@
 #include "SparseMatrix.hpp"
 #include "Vector.hpp"
 #include "CGData.hpp"
+#include <cassert>
+
+int CreateZFPArray(Vector & vect, local_int_t nx, local_int_t ny, local_int_t nz);
+
+inline int CreateZFPArray(Vector & vect, const Vector & model){
+  assert(vect.localLength == model.localLength);
+  zfp::array3d & array = *(zfp::array3d*)model.optimizationData;
+  return CreateZFPArray(vect, array.size_x(), array.size_y(), array.size_z());
+}
 
 int OptimizeProblem(SparseMatrix & A, CGData & data,  Vector & b, Vector & x, Vector & xexact);
 

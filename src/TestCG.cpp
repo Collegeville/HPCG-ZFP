@@ -31,6 +31,7 @@
 using std::endl;
 #include <vector>
 #include "hpcg.hpp"
+#include "OptimizeProblem.hpp"
 
 #include "TestCG.hpp"
 #include "CG.hpp"
@@ -59,6 +60,11 @@ int TestCG(SparseMatrix & A, CGData & data, Vector & b, Vector & x, TestCGData &
   InitializeVector(origDiagA, A.localNumberOfRows);
   InitializeVector(exaggeratedDiagA, A.localNumberOfRows);
   InitializeVector(origB, A.localNumberOfRows);
+
+  CreateZFPArray(origDiagA, b);
+  CreateZFPArray(exaggeratedDiagA, origDiagA);
+  CreateZFPArray(origB, b);
+
   CopyMatrixDiagonal(A, origDiagA);
   CopyVector(origDiagA, exaggeratedDiagA);
   CopyVector(b, origB);
@@ -114,7 +120,7 @@ int TestCG(SparseMatrix & A, CGData & data, Vector & b, Vector & x, TestCGData &
   ReplaceMatrixDiagonal(A, origDiagA);
   CopyVector(origB, b);
   // Delete vectors
-  DeleteVector(origDiagA); 
+  DeleteVector(origDiagA);
   DeleteVector(exaggeratedDiagA);
   DeleteVector(origB);
   testcg_data.normr = normr;
