@@ -57,8 +57,13 @@ inline void InitializeVector(Vector & v, local_int_t localLength) {
  */
 inline void ZeroVector(Vector & v) {
   local_int_t localLength = v.localLength;
-  double * vv = v.values;
-  for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  if (v.optimizationData) {
+    zfp::array1d & vod = *(zfp::array1d*)v.optimizationData;
+    for (int i=0; i<localLength; ++i) vod[i] = 0.0;
+  } else {
+    double * vv = v.values;
+    for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  }
   return;
 }
 /*!
@@ -70,8 +75,13 @@ inline void ZeroVector(Vector & v) {
  */
 inline void ScaleVectorValue(Vector & v, local_int_t index, double value) {
   assert(index>=0 && index < v.localLength);
-  double * vv = v.values;
-  vv[index] *= value;
+  if (v.optimizationData) {
+    zfp::array1d & vod = *(zfp::array1d*)v.optimizationData;
+    vod[index] *= value;
+  } else {
+    double * vv = v.values;
+    vv[index] *= value;
+  }
   return;
 }
 /*!
@@ -81,8 +91,13 @@ inline void ScaleVectorValue(Vector & v, local_int_t index, double value) {
  */
 inline void FillRandomVector(Vector & v) {
   local_int_t localLength = v.localLength;
-  double * vv = v.values;
-  for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  if (v.optimizationData) {
+    zfp::array1d & vod = *(zfp::array1d*)v.optimizationData;
+    for (int i=0; i<localLength; ++i) vod[i] = rand() / (double)(RAND_MAX) + 1.0;
+  } else {
+    double * vv = v.values;
+    for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  }
   return;
 }
 /*!
@@ -94,9 +109,16 @@ inline void FillRandomVector(Vector & v) {
 inline void CopyVector(const Vector & v, Vector & w) {
   local_int_t localLength = v.localLength;
   assert(w.localLength >= localLength);
-  double * vv = v.values;
-  double * wv = w.values;
-  for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  assert((v.optimizationData == 0) == (w.optimizationData == 0));
+  if (v.optimizationData) {
+    zfp::array1d & vod = *(zfp::array1d*)v.optimizationData;
+    zfp::array1d & wod = *(zfp::array1d*)w.optimizationData;
+    for (int i=0; i<localLength; ++i) wod[i] = vod[i];
+  } else {
+    double * vv = v.values;
+    double * wv = w.values;
+    for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  }
   return;
 }
 

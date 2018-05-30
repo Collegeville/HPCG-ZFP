@@ -119,10 +119,12 @@ void CheckProblem(const SparseMatrix & A, Vector * b, Vector * x, Vector * xexac
 #ifndef HPCG_NO_OPENMP
         #pragma omp critical
 #endif
-        localNumberOfNonzeros += numberOfNonzerosInRow; // Protect this with an atomic
-        if (b!=0)      assert(bv[currentLocalRow] == 26.0 - ((double) (numberOfNonzerosInRow-1)));
-        if (x!=0)      assert(xv[currentLocalRow] == 0.0);
-        if (xexact!=0) assert(xexactv[currentLocalRow] == 1.0);
+        {
+          localNumberOfNonzeros += numberOfNonzerosInRow; // Protect this with an atomic
+          if (b!=0)      assert(bv[currentLocalRow] == 26.0 - ((double) (numberOfNonzerosInRow-1)));
+          if (x!=0)      assert(xv[currentLocalRow] == 0.0);
+          if (xexact!=0) assert(xexactv[currentLocalRow] == 1.0);
+        }
       } // end ix loop
     } // end iy loop
   } // end iz loop

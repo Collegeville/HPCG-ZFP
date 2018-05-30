@@ -13,12 +13,12 @@
 //@HEADER
 
 /*!
- @file ComputeRestriction_ref.cpp
+ @file ComputeRestriction.cpp
 
  HPCG routine
  */
 
-#include "ComputeRestriction_ref.hpp"
+#include "ComputeRestriction.hpp"
 
 /*!
   Routine to compute the coarse residual vector.
@@ -32,11 +32,11 @@
 
   @return Returns zero on success and a non-zero value otherwise.
 */
-int ComputeRestriction_ref(const SparseMatrix & A, const Vector & rf) {
+int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
 
-  double * Axfv = A.mgData->Axf->values;
-  double * rfv = rf.values;
-  double * rcv = A.mgData->rc->values;
+  zfp::array1d & Axfv = *(zfp::array1d*)A.mgData->Axf->optimizationData;
+  zfp::array1d & rfv = *(zfp::array1d*)rf.optimizationData;
+  zfp::array1d & rcv = *(zfp::array1d*)A.mgData->rc->optimizationData;
   local_int_t * f2c = A.mgData->f2cOperator;
   local_int_t nc = A.mgData->rc->localLength;
 
