@@ -117,11 +117,11 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 #endif
 
   double bytes_used = 0;
-  Geometry & geom = *(A.geom);
+  Geometry * geom = A.geom;
 
-  local_int_t nx = geom.nx;
-  local_int_t ny = geom.ny;
-  local_int_t nz = geom.nz;
+  local_int_t nx = geom->nx;
+  local_int_t ny = geom->ny;
+  local_int_t nz = geom->nz;
 
   bytes_used += CreateZFPArray(b, nx, ny, nz);
   bytes_used += CreateZFPArray(x, nx, ny, nz);
@@ -130,9 +130,9 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
   bytes_used += CreateZFPArray(data.Ap, nx, ny, nz);
 
   //have additional values from the halo
-  nx = nx + (geom.npx == 1?0:(geom.ipx == 0 || geom.ipx == geom.npx-1?1:2));
-  ny = ny + (geom.npx == 1?0:(geom.ipy == 0 || geom.ipy == geom.npy-1?1:2));
-  nz = nz + (geom.npx == 1?0:(geom.ipz == 0 || geom.ipz == geom.npz-1?1:2));
+  nx = nx + (geom->npx == 1?0:(geom->ipx == 0 || geom->ipx == geom->npx-1?1:2));
+  ny = ny + (geom->npy == 1?0:(geom->ipy == 0 || geom->ipy == geom->npy-1?1:2));
+  nz = nz + (geom->npz == 1?0:(geom->ipz == 0 || geom->ipz == geom->npz-1?1:2));
 
   bytes_used += CreateZFPArray(data.p, nx, ny, nz);
   bytes_used += CreateZFPArray(data.z, nx, ny, nz);
@@ -144,13 +144,13 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 
       bytes_used += CreateZFPArray(*Anext->mgData->Axf, nx, ny, nz);
 
-      geom = *(Anext->Ac->geom);
+      geom = Anext->Ac->geom;
 
-      bytes_used += CreateZFPArray(*Anext->mgData->rc, geom.nx, geom.ny, geom.nz);
+      bytes_used += CreateZFPArray(*Anext->mgData->rc, geom->nx, geom->ny, geom->nz);
 
-      nx = geom.nx + (geom.npx == 1?0:(geom.ipx == 0 || geom.ipx == geom.npx-1?1:2));
-      ny = geom.ny + (geom.npx == 1?0:(geom.ipy == 0 || geom.ipy == geom.npy-1?1:2));
-      nz = geom.nz + (geom.npx == 1?0:(geom.ipz == 0 || geom.ipz == geom.npz-1?1:2));
+      nx = geom->nx + (geom->npx == 1?0:(geom->ipx == 0 || geom->ipx == geom->npx-1?1:2));
+      ny = geom->ny + (geom->npy == 1?0:(geom->ipy == 0 || geom->ipy == geom->npy-1?1:2));
+      nz = geom->nz + (geom->npz == 1?0:(geom->ipz == 0 || geom->ipz == geom->npz-1?1:2));
 
       bytes_used += CreateZFPArray(*Anext->mgData->xc, nx, ny, nz);
     }

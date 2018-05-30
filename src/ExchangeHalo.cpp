@@ -44,11 +44,40 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
   local_int_t totalToBeSent = A.totalToBeSent;
   local_int_t * elementsToSend = A.elementsToSend;
 
-  double * const xv = x.values;
-
   int size, rank; // Number of MPI processes, My process ID
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+
+  double * x_external;
+
+  if (x.optimizationData){
+    zfp::array3d & xopt = *(zfp::array3d*)x.optimizationData;
+
+    x_external = new double[x.localLength - localNumberOfRows];
+
+    //
+    // Fill up send buffer
+    //
+
+    // TODO: Thread this loop
+    for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xopt[elementsToSend[i]];
+  } else {
+    double * const xv = x.values;
+
+    //
+    // Externals are at end of locals
+    //
+    x_external = (double *) xv + localNumberOfRows;
+
+    //
+    // Fill up send buffer
+    //
+
+    // TODO: Thread this loop
+    for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
+  }
+
 
   //
   //  first post receives, these are immediate receives
@@ -60,26 +89,14 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
 
   MPI_Request * request = new MPI_Request[num_neighbors];
 
-  //
-  // Externals are at end of locals
-  //
-  double * x_external = (double *) xv + localNumberOfRows;
-
   // Post receives first
   // TODO: Thread this loop
+  double * x_recv_location = x_external;
   for (int i = 0; i < num_neighbors; i++) {
     local_int_t n_recv = receiveLength[i];
-    MPI_Irecv(x_external, n_recv, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
-    x_external += n_recv;
+    MPI_Irecv(x_recv_location, n_recv, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
+    x_recv_location += n_recv;
   }
-
-
-  //
-  // Fill up send buffer
-  //
-
-  // TODO: Thread this loop
-  for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
 
   //
   // Send to each neighbor
@@ -102,6 +119,14 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
     if ( MPI_Wait(request+i, &status) ) {
       std::exit(-1); // TODO: have better error exit
     }
+  }
+
+  if (x.optimizationData){
+    zfp::array3d & xopt = *(zfp::array3d*)x.optimizationData;
+    for (int i = 0; i<x_recv_location - x_external; i++){
+      xopt[i+localNumberOfRows] = x_external[i];
+    }
+    delete [] x_external;
   }
 
   delete [] request;

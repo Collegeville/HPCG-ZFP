@@ -43,7 +43,9 @@ HPCG_DEPS = src/CG.o \
 	    src/CheckAspectRatio.o \
 	    src/GenerateCoarseProblem.o \
 	    src/init.o \
-	    src/finalize.o 
+	    src/finalize.o \
+        src/ComputeProlongation.o \
+        src/ComputeRestriction.o
 	    
 
 # These header files are included in many source files, so we recompile every file if one or more of these header is modified.
@@ -165,7 +167,13 @@ src/ComputeMG_ref.o: ../src/ComputeMG_ref.cpp ../src/ComputeMG_ref.hpp $(PRIMARY
 src/ComputeMG.o: ../src/ComputeMG.cpp ../src/ComputeMG.hpp $(PRIMARY_HEADERS)
 	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
 
+src/ComputeProlongation.o: ../src/ComputeProlongation.cpp ../src/ComputeProlongation.hpp $(PRIMARY_HEADERS)
+	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
+
 src/ComputeProlongation_ref.o: ../src/ComputeProlongation_ref.cpp ../src/ComputeProlongation_ref.hpp $(PRIMARY_HEADERS)
+	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
+
+src/ComputeRestriction.o: ../src/ComputeRestriction.cpp ../src/ComputeRestriction.hpp $(PRIMARY_HEADERS)
 	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
 
 src/ComputeRestriction_ref.o: ../src/ComputeRestriction_ref.cpp ../src/ComputeRestriction_ref.hpp $(PRIMARY_HEADERS)

@@ -19,7 +19,7 @@
  */
 
 #include "ComputeWAXPBY.hpp"
-#include "ComputeWAXPBY_ref.hpp"
+#include <cassert>
 
 /*!
   Routine to compute the update of a vector with the sum of two
@@ -42,7 +42,22 @@
 int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
     const double beta, const Vector & y, Vector & w, bool & isOptimized) {
 
-  // This line and the next two lines should be removed and your version of ComputeWAXPBY should be used.
-  isOptimized = false;
-  return ComputeWAXPBY_ref(n, alpha, x, beta, y, w);
+  assert(x.localLength>=n); // Test vector lengths
+  assert(y.localLength>=n);
+  assert(w.localLength>=n);
+  assert(x.optimizationData);
+  assert(y.optimizationData);
+
+  const zfp::array3d & xv = *(zfp::array3d*)x.optimizationData;
+  const zfp::array3d & yv = *(zfp::array3d*)y.optimizationData;
+  zfp::array3d & wv = *(zfp::array3d*)w.optimizationData;
+if (alpha==1.0) {
+  for (local_int_t i=0; i<n; i++) wv[i] = xv[i] + beta * yv[i];
+} else if (beta==1.0) {
+  for (local_int_t i=0; i<n; i++) wv[i] = alpha * xv[i] + yv[i];
+} else  {
+  for (local_int_t i=0; i<n; i++) wv[i] = alpha * xv[i] + beta * yv[i];
+}
+
+return 0;
 }
