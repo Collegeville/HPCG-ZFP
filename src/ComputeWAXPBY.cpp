@@ -19,7 +19,10 @@
  */
 
 #include "ComputeWAXPBY.hpp"
-#include "ComputeWAXPBY_ref.hpp"
+#ifndef HPCG_NO_OPENMP
+#include <omp.h>
+#endif
+#include <cassert>
 
 /*!
   Routine to compute the update of a vector with the sum of two
@@ -42,7 +45,96 @@
 int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
     const double beta, const Vector & y, Vector & w, bool & isOptimized) {
 
-  // This line and the next two lines should be removed and your version of ComputeWAXPBY should be used.
-  isOptimized = false;
-  return ComputeWAXPBY_ref(n, alpha, x, beta, y, w);
+  assert(x.localLength>=n); // Test vector lengths
+  assert(y.localLength>=n);
+  assert(w.localLength>=n);
+
+
+  if (alpha==1.0) {
+    #ifndef HPCG_NO_OPENMP
+        #pragma omp parallel for
+    #endif
+    for (local_int_t block = 0; block<n/BLOCK_SIZE; block++) {
+      double xBlock[BLOCK_SIZE];
+      double yBlock[BLOCK_SIZE];
+      double wBlock[BLOCK_SIZE];
+
+      DecodeBlock(x, block, xBlock);
+      DecodeBlock(y, block, yBlock);
+      for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
+        wBlock[j] = xBlock[j] + beta * yBlock[j];
+      }
+      EncodeBlock(w, block, wBlock);
+    }
+    if (n%BLOCK_SIZE != 0) {
+      double xBlock[BLOCK_SIZE];
+      double yBlock[BLOCK_SIZE];
+      double wBlock[BLOCK_SIZE];
+
+      DecodeBlock(x, n/BLOCK_SIZE, xBlock);
+      DecodeBlock(y, n/BLOCK_SIZE, yBlock);
+      for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
+        wBlock[j] = xBlock[j] + beta * yBlock[j];
+      }
+      EncodeBlock(w, n/BLOCK_SIZE, wBlock);
+    }
+  } else if (beta==1.0) {
+    #ifndef HPCG_NO_OPENMP
+      #pragma omp parallel for
+    #endif
+    for (local_int_t block = 0; block<n/BLOCK_SIZE; block++) {
+      double xBlock[BLOCK_SIZE];
+      double yBlock[BLOCK_SIZE];
+      double wBlock[BLOCK_SIZE];
+
+      DecodeBlock(x, block, xBlock);
+      DecodeBlock(y, block, yBlock);
+      for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
+        wBlock[j] = alpha * xBlock[j] + yBlock[j];
+      }
+      EncodeBlock(w, block, wBlock);
+    }
+    if (n%BLOCK_SIZE != 0) {
+      double xBlock[BLOCK_SIZE];
+      double yBlock[BLOCK_SIZE];
+      double wBlock[BLOCK_SIZE];
+
+      DecodeBlock(x, n/BLOCK_SIZE, xBlock);
+      DecodeBlock(y, n/BLOCK_SIZE, yBlock);
+      for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
+        wBlock[j] = alpha * xBlock[j] + yBlock[j];
+      }
+      EncodeBlock(w, n/BLOCK_SIZE, wBlock);
+    }
+  } else {
+    #ifndef HPCG_NO_OPENMP
+      #pragma omp parallel for
+    #endif
+    for (local_int_t block = 0; block<n/BLOCK_SIZE; block++) {
+      double xBlock[BLOCK_SIZE];
+      double yBlock[BLOCK_SIZE];
+      double wBlock[BLOCK_SIZE];
+
+      DecodeBlock(x, block, xBlock);
+      DecodeBlock(y, block, yBlock);
+      for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
+        wBlock[j] = alpha * xBlock[j] + beta * yBlock[j];
+      }
+      EncodeBlock(w, block, wBlock);
+    }
+    if (n%BLOCK_SIZE != 0) {
+      double xBlock[BLOCK_SIZE];
+      double yBlock[BLOCK_SIZE];
+      double wBlock[BLOCK_SIZE];
+
+      DecodeBlock(x, n/BLOCK_SIZE, xBlock);
+      DecodeBlock(y, n/BLOCK_SIZE, yBlock);
+      for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
+        wBlock[j] = alpha * xBlock[j] + beta * yBlock[j];
+      }
+      EncodeBlock(w, n/BLOCK_SIZE, wBlock);
+    }
+  }
+
+    return 0;
 }

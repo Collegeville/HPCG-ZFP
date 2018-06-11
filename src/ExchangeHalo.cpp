@@ -21,6 +21,7 @@
 // Compile this routine only if running with MPI
 #ifndef HPCG_NO_MPI
 #include <mpi.h>
+#include <cmath>
 #include "Geometry.hpp"
 #include "ExchangeHalo.hpp"
 #include <cstdlib>
@@ -44,11 +45,34 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
   local_int_t totalToBeSent = A.totalToBeSent;
   local_int_t * elementsToSend = A.elementsToSend;
 
-  double * const xv = x.values;
-
   int size, rank; // Number of MPI processes, My process ID
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  double * const xv = x.values;
+
+  //
+  // Externals are at end of locals
+  //
+  double * x_external = (double *) xv + localNumberOfRows;
+
+
+  //
+  // Fill up send buffer
+  //
+  if (x.optimizationData) {
+    // TODO: Thread this loop
+    for (local_int_t i=0; i<totalToBeSent; i++) {
+      double xBlock [BLOCK_SIZE];
+      local_int_t src = elementsToSend[i];
+      DecodeBlock(x, src/BLOCK_SIZE, xBlock);
+      sendBuffer[i] = xBlock[src%BLOCK_SIZE];
+    }
+  } else {
+    // TODO: Thread this loop
+    for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
+  }
+
 
   //
   //  first post receives, these are immediate receives
@@ -60,26 +84,14 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
 
   MPI_Request * request = new MPI_Request[num_neighbors];
 
-  //
-  // Externals are at end of locals
-  //
-  double * x_external = (double *) xv + localNumberOfRows;
-
   // Post receives first
   // TODO: Thread this loop
+  local_int_t total_recv = 0;
   for (int i = 0; i < num_neighbors; i++) {
     local_int_t n_recv = receiveLength[i];
-    MPI_Irecv(x_external, n_recv, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
-    x_external += n_recv;
+    MPI_Irecv(x_external+total_recv, n_recv, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
+    total_recv += n_recv;
   }
-
-
-  //
-  // Fill up send buffer
-  //
-
-  // TODO: Thread this loop
-  for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
 
   //
   // Send to each neighbor
@@ -101,6 +113,26 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
   for (int i = 0; i < num_neighbors; i++) {
     if ( MPI_Wait(request+i, &status) ) {
       std::exit(-1); // TODO: have better error exit
+    }
+  }
+
+  if (x.optimizationData){
+    double xBlock[BLOCK_SIZE];
+    if (total_recv) {
+
+      int offset = localNumberOfRows%BLOCK_SIZE;
+      local_int_t block = localNumberOfRows/BLOCK_SIZE;
+      DecodeBlock(x, block, xBlock);
+      for (int j = offset; j < BLOCK_SIZE; j++) {
+        xBlock[j] = x_external[j-offset];
+      }
+      EncodeBlock(x, block, xBlock);
+      block++;
+      local_int_t i = BLOCK_SIZE-offset;
+      for (; block < ceil((total_recv+localNumberOfRows)/(double)BLOCK_SIZE); block++){
+        EncodeBlock(x, block, x_external+i-offset);
+        i += BLOCK_SIZE;
+      }
     }
   }
 

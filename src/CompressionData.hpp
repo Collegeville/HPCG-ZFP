@@ -18,12 +18,12 @@
 /*!
   The number of values stored per block
 */
-constexpr const int BLOCK_SIZE = 16;
+constexpr const int BLOCK_SIZE = 8;
 
 /*!
   Whether to cache align the starts of blocks
 */
-constexpr const int CACHE_ALIGNED = 0;
+constexpr const int CACHE_ALIGNED = 1;
 
 /*!
   The size of a cache line in bytes
@@ -41,7 +41,7 @@ constexpr const int MIN_BLOCK_BYTES = COMPRESSED_BYTES + 8*BLOCK_SIZE;
 /*!
   The number of bytes per block.
 */
-constexpr const int BLOCK_BYTES = CACHE_ALIGNED ? ceil(MIN_BLOCK_BYTES/CACHE_LINE_SIZE)*CACHE_LINE_SIZE : MIN_BLOCK_BYTES;
+constexpr const int BLOCK_BYTES = CACHE_ALIGNED ? ceil(MIN_BLOCK_BYTES/(double)CACHE_LINE_SIZE)*CACHE_LINE_SIZE : MIN_BLOCK_BYTES;
 
 
 
@@ -61,7 +61,7 @@ constexpr const int errorMode = PW_REL;
 
 //error bounds as per SZ
 constexpr const double ABS_ERROR_BOUND = 1e-6;
-constexpr const double PWREL_BOUND_RATIO = 1e-6;
+constexpr const double PWREL_BOUND_RATIO = 1.0e-14;
 
 
 constexpr const int UNCOMPRESSED = 0x00;

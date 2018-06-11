@@ -117,9 +117,23 @@ inline void InitializeSparseMatrix(SparseMatrix & A, Geometry * geom) {
  */
 inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
     double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
     assert(A.localNumberOfRows==diagonal.localLength);
-    for (local_int_t i=0; i<A.localNumberOfRows; ++i) dv[i] = *(curDiagA[i]);
+
+    double dBlock [BLOCK_SIZE] = {};
+    for (local_int_t block = 0; block<A.localNumberOfRows/BLOCK_SIZE; block++){
+      local_int_t i = block*BLOCK_SIZE;
+      for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
+        dBlock[j] = *(curDiagA[i+j]);
+      }
+      EncodeBlock(diagonal, block, dBlock);
+    }
+    if (A.localNumberOfRows%BLOCK_SIZE != 0) {
+      local_int_t block = A.localNumberOfRows/BLOCK_SIZE;
+      for (local_int_t j = 0; j < A.localNumberOfRows%BLOCK_SIZE; j++) {
+        dBlock[j] = *(curDiagA[block*BLOCK_SIZE+j]);
+      }
+      EncodeBlock(diagonal, block, dBlock);
+    }
   return;
 }
 /*!
@@ -130,9 +144,23 @@ inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
  */
 inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
     double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
     assert(A.localNumberOfRows==diagonal.localLength);
-    for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+
+    double dBlock [BLOCK_SIZE] = {};
+    for (local_int_t block = 0; block<A.localNumberOfRows/BLOCK_SIZE; block++){
+      local_int_t i = block*BLOCK_SIZE;
+      DecodeBlock(diagonal, block, dBlock);
+      for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
+        *(curDiagA[i+j]) = dBlock[j];
+      }
+    }
+    if (A.localNumberOfRows%BLOCK_SIZE != 0) {
+      local_int_t block = A.localNumberOfRows/BLOCK_SIZE;
+      DecodeBlock(diagonal, block, dBlock);
+      for (local_int_t j = 0; j < A.localNumberOfRows%BLOCK_SIZE; j++) {
+        *(curDiagA[block*BLOCK_SIZE+j]) = dBlock[j];
+      }
+    }
   return;
 }
 /*!

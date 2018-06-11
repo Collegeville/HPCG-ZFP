@@ -21,8 +21,12 @@
 #ifndef VECTOR_HPP
 #define VECTOR_HPP
 #include <cassert>
+#include <cmath>
 #include <cstdlib>
 #include "Geometry.hpp"
+#include "CompressionData.hpp"
+#include "EncodeBlock.hpp"
+#include "DecodeBlock.hpp"
 
 struct Vector_STRUCT {
   local_int_t localLength;  //!< length of local portion of the vector
@@ -56,8 +60,20 @@ inline void InitializeVector(Vector & v, local_int_t localLength) {
  */
 inline void ZeroVector(Vector & v) {
   local_int_t localLength = v.localLength;
-  double * vv = v.values;
-  for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  if (v.optimizationData) {
+    double vBlock [BLOCK_SIZE] = {};
+    local_int_t numBlocks = ceil(localLength/(double)BLOCK_SIZE);
+
+    #ifndef HPCG_NO_OPENMP
+      #pragma omp parallel for
+    #endif
+    for (local_int_t block = 0; block < numBlocks; block++){
+      EncodeBlock(v, block, vBlock);
+    }
+  } else {
+    double * vv = v.values;
+    for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  }
   return;
 }
 /*!
@@ -69,8 +85,16 @@ inline void ZeroVector(Vector & v) {
  */
 inline void ScaleVectorValue(Vector & v, local_int_t index, double value) {
   assert(index>=0 && index < v.localLength);
-  double * vv = v.values;
-  vv[index] *= value;
+  if (v.optimizationData) {
+    local_int_t block = index/BLOCK_SIZE;
+    double vBlock[BLOCK_SIZE];
+    DecodeBlock(v, block, vBlock);
+    vBlock[index%BLOCK_SIZE] *= value;
+    EncodeBlock(v, block, vBlock);
+  } else {
+    double * vv = v.values;
+    vv[index] *= value;
+  }
   return;
 }
 /*!
@@ -80,8 +104,24 @@ inline void ScaleVectorValue(Vector & v, local_int_t index, double value) {
  */
 inline void FillRandomVector(Vector & v) {
   local_int_t localLength = v.localLength;
-  double * vv = v.values;
-  for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  if (v.optimizationData) {
+
+    local_int_t numBlocks = ceil(localLength/(double)BLOCK_SIZE);
+
+    #ifndef HPCG_NO_OPENMP
+      #pragma omp parallel for
+    #endif
+    for (local_int_t block = 0; block<numBlocks; block++){
+      double vBlock [BLOCK_SIZE];
+      for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
+        vBlock[j] = rand() / (double)(RAND_MAX) + 1.0;
+      }
+      EncodeBlock(v, block, vBlock);
+    }
+  } else {
+    double * vv = v.values;
+    for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  }
   return;
 }
 /*!
@@ -93,9 +133,21 @@ inline void FillRandomVector(Vector & v) {
 inline void CopyVector(const Vector & v, Vector & w) {
   local_int_t localLength = v.localLength;
   assert(w.localLength >= localLength);
-  double * vv = v.values;
-  double * wv = w.values;
-  for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  assert(!v.optimizationData == !w.optimizationData);
+  if (v.optimizationData) {
+    const char* vBuf = (char*)v.optimizationData;
+    char* wBuf = (char*)w.optimizationData;
+    local_int_t bytes = ceil(v.localLength/(double)BLOCK_SIZE)*BLOCK_BYTES;
+    #ifndef HPCG_NO_OPENMP
+      #pragma omp parallel for
+    #endif
+    for (int i=0; i<bytes; ++i) wBuf[i] = vBuf[i];
+
+  } else {
+    double * vv = v.values;
+    double * wv = w.values;
+    for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  }
   return;
 }
 
