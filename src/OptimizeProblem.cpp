@@ -19,6 +19,44 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+#include <cassert>
+#include <cmath>
+#include "CompressionData.hpp"
+#include "EncodeBlock.hpp"
+#include "DecodeBlock.hpp"
+
+double optimization_allocation = 0.0;
+
+
+/*!
+  helper function to create optimized array for vector
+
+  @param[inout] vect   The vector to create a zfp array for
+
+  @return returns the number of bytes used for the array
+*/
+int CreateOptimizedArray(Vector & vect){
+
+  local_int_t numBlocks = ceil(vect.localLength/(double)BLOCK_SIZE);
+  local_int_t totalSize = numBlocks * BLOCK_BYTES;
+
+  if (CACHE_ALIGNED) {
+    vect.optimizationData = aligned_alloc(CACHE_LINE_SIZE, totalSize);
+  } else {
+    vect.optimizationData = malloc(totalSize);
+  }
+  assert(vect.optimizationData);
+
+  int i = 0;
+  for (; i < numBlocks; i++){
+    EncodeBlock(vect, i, vect.values+BLOCK_SIZE*i);
+  }
+
+  return totalSize;
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +133,40 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  double bytes_used = 0;
+
+  bytes_used += CreateOptimizedArray(b);
+  bytes_used += CreateOptimizedArray(x);
+  bytes_used += CreateOptimizedArray(xexact);
+  bytes_used += CreateOptimizedArray(data.r);
+  bytes_used += CreateOptimizedArray(data.z);
+  bytes_used += CreateOptimizedArray(data.p);
+  bytes_used += CreateOptimizedArray(data.Ap);
+
+  SparseMatrix * Anext = &A;
+
+  while (Anext) {
+    if (Anext->mgData) {
+      if ((void*)Anext->mgData->rc != (void*)0) {
+        bytes_used += CreateOptimizedArray(*Anext->mgData->rc);
+      }
+      if ((void*)Anext->mgData->rc != (void*)0) {
+        bytes_used += CreateOptimizedArray(*Anext->mgData->xc);
+      }
+      if ((void*)Anext->mgData->rc != (void*)0) {
+        bytes_used += CreateOptimizedArray(*Anext->mgData->Axf);
+      }
+    }
+    Anext = Anext->Ac;
+  }
+  optimization_allocation = bytes_used;
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimization_allocation;
 
 }

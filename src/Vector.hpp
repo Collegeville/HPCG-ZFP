@@ -109,6 +109,13 @@ inline void DeleteVector(Vector & v) {
 
   delete [] v.values;
   v.localLength = 0;
+
+  if (v.optimizationData) {
+    //allocated with malloc/aligned_alloc
+    free(v.optimizationData);
+    v.optimizationData = NULL;
+  }
+
   return;
 }
 
