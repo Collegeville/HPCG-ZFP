@@ -130,7 +130,7 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
       block++;
       local_int_t i = BLOCK_SIZE-offset;
       for (; block < ceil((total_recv+localNumberOfRows)/(double)BLOCK_SIZE); block++){
-        EncodeBlock(x, block, x_external+i-offset);
+        EncodeBlock(x, block, x_external+i);
         i += BLOCK_SIZE;
       }
     }
