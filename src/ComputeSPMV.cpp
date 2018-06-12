@@ -61,7 +61,8 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   for (local_int_t block=0; block < nrow/BLOCK_SIZE; block++)  {
     double yBlock[BLOCK_SIZE];
     double xBlock[BLOCK_SIZE];
-    local_int_t last_decode = -1;
+    local_int_t lastDecodeBlock = -1;
+    local_int_t lastDecodePosition;
 
     local_int_t i = block*BLOCK_SIZE;
     for (local_int_t k = 0; k < BLOCK_SIZE; k++) {
@@ -70,13 +71,20 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
       const local_int_t * const cur_inds = A.mtxIndL[i+k];
       const int cur_nnz = A.nonzerosInRow[i+k];
 
-      for (int j=0; j< cur_nnz; j++) {
+      for (int j=0; j < cur_nnz; j++) {
         local_int_t src = cur_inds[j];
-        if (last_decode != src/BLOCK_SIZE) {
-          last_decode = src/BLOCK_SIZE;
-          DecodeBlock(x, last_decode, xBlock);
+        local_int_t srcBlock = src/BLOCK_SIZE;
+        local_int_t srcPos = src%BLOCK_SIZE;
+
+        if (srcBlock != lastDecodeBlock) {
+          PartialDecodeBlock(x, srcBlock, srcPos+1, xBlock);
+          lastDecodeBlock = srcBlock;
+          lastDecodePosition = srcPos+1;
+        } else if(srcPos >= lastDecodePosition) {
+          ResumePartialDecodeBlock(x, srcBlock, srcPos+1, lastDecodePosition, xBlock);
+          lastDecodePosition = srcPos+1;
         }
-        sum += cur_vals[j]*xBlock[src%BLOCK_SIZE];
+        sum += cur_vals[j]*xBlock[srcPos];
       }
       yBlock[k] = sum;
     }
@@ -86,7 +94,8 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   if (nrow%BLOCK_SIZE) {
     double yBlock[BLOCK_SIZE];
     double xBlock[BLOCK_SIZE];
-    local_int_t last_decode = -1;
+    local_int_t lastDecodeBlock = -1;
+    local_int_t lastDecodePosition = 0;
 
     local_int_t block = nrow/BLOCK_SIZE;
     local_int_t i = block*BLOCK_SIZE;
@@ -98,11 +107,17 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
 
       for (int j=0; j< cur_nnz; j++) {
         local_int_t src = cur_inds[j];
-        if (last_decode != src/BLOCK_SIZE) {
-          last_decode = src/BLOCK_SIZE;
-          DecodeBlock(x, last_decode, xBlock);
+        local_int_t srcBlock = src/BLOCK_SIZE;
+        local_int_t srcPos = src%BLOCK_SIZE;
+        if (srcBlock != lastDecodeBlock) {
+          PartialDecodeBlock(x, srcBlock, srcPos+1, xBlock);
+          lastDecodeBlock = srcBlock;
+          lastDecodePosition = srcPos+1;
+        } else if(srcPos >= lastDecodePosition) {
+          ResumePartialDecodeBlock(x, srcBlock, srcPos+1, lastDecodePosition, xBlock);
+          lastDecodePosition = srcPos+1;
         }
-        sum += cur_vals[j]*xBlock[src%BLOCK_SIZE];
+        sum += cur_vals[j]*xBlock[srcPos];
       }
       yBlock[k] = sum;
     }

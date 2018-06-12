@@ -23,5 +23,6 @@ typedef struct Vector_STRUCT Vector;
 
 int DecodeBlock(const Vector & stream, local_int_t blockid, double * block);
 int PartialDecodeBlock(const Vector & vect, const local_int_t blockid, const local_int_t blockLength, double * block);
+int ResumePartialDecodeBlock(const Vector & vect, const local_int_t blockid, const local_int_t blockLength, const local_int_t previousEnd, double * block);
 
 #endif // DECODEBLOCK_HPP

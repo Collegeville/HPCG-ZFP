@@ -69,7 +69,8 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   double xBlock[BLOCK_SIZE];
 
   double tempBlock [BLOCK_SIZE];//cache to most recently decoded block
-  int last_decode = -1;
+  int lastDecodeBlock = -1;
+  int lastDecodePosition;
 
   for (local_int_t block=0; block < nrow/BLOCK_SIZE; block++)  {
     PartialDecodeBlock(r, block, BLOCK_SIZE, rBlock);
@@ -85,14 +86,20 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
       for (int j=0; j< currentNumberOfNonzeros; j++) {
         local_int_t curCol = currentColIndices[j];
-        if (curCol/BLOCK_SIZE != block) {
-          if (curCol/BLOCK_SIZE != last_decode) {
-            last_decode = curCol/BLOCK_SIZE;
-            DecodeBlock(x, last_decode, tempBlock);
+        local_int_t curBlock = curCol/BLOCK_SIZE;
+        local_int_t curPos = curCol%BLOCK_SIZE;
+        if (curBlock != block) {
+          if (curBlock != lastDecodeBlock) {
+            PartialDecodeBlock(x, curBlock, curPos+1, tempBlock);
+            lastDecodeBlock = curBlock;
+            lastDecodePosition = curPos+1;
+          } else if(curPos >= lastDecodePosition) {
+            ResumePartialDecodeBlock(x, curBlock, curPos+1, lastDecodePosition, tempBlock);
+            lastDecodePosition = curPos+1;
           }
-          sum -= currentValues[j] * tempBlock[curCol%BLOCK_SIZE];
-        } else if (curCol%BLOCK_SIZE != k) {// Exclude diagonal contribution
-          sum -= currentValues[j] * xBlock[curCol%BLOCK_SIZE];
+          sum -= currentValues[j] * tempBlock[curPos];
+        } else if (curPos != k) {// Exclude diagonal contribution
+          sum -= currentValues[j] * xBlock[curPos];
         }
       }
 
@@ -114,14 +121,21 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
       for (int j=0; j< currentNumberOfNonzeros; j++) {
         local_int_t curCol = currentColIndices[j];
-        if (curCol/BLOCK_SIZE != block) {
-          if (curCol/BLOCK_SIZE != last_decode) {
-            last_decode = curCol/BLOCK_SIZE;
-            DecodeBlock(x, last_decode, tempBlock);
+        local_int_t curBlock = curCol/BLOCK_SIZE;
+        local_int_t curPos = curCol%BLOCK_SIZE;
+
+        if (curBlock != block) {
+          if (curBlock != lastDecodeBlock) {
+            PartialDecodeBlock(x, curBlock, curPos+1, tempBlock);
+            lastDecodeBlock = curBlock;
+            lastDecodePosition = curPos+1;
+          } else if(curPos >= lastDecodePosition) {
+            ResumePartialDecodeBlock(x, curBlock, curPos+1, lastDecodePosition, tempBlock);
+            lastDecodePosition = curPos+1;
           }
-          sum -= currentValues[j] * tempBlock[curCol%BLOCK_SIZE];
-        } else if (curCol%BLOCK_SIZE != k) {// Exclude diagonal contribution
-          sum -= currentValues[j] * xBlock[curCol%BLOCK_SIZE];
+          sum -= currentValues[j] * tempBlock[curPos];
+        } else if (curPos != k) {// Exclude diagonal contribution
+          sum -= currentValues[j] * xBlock[curPos];
         }
       }
 
@@ -146,14 +160,21 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
       for (int j=0; j< currentNumberOfNonzeros; j++) {
         local_int_t curCol = currentColIndices[j];
-        if (curCol/BLOCK_SIZE != block) {
-          if (curCol/BLOCK_SIZE != last_decode) {
-            last_decode = curCol/BLOCK_SIZE;
-            DecodeBlock(x, last_decode, tempBlock);
+        local_int_t curBlock = curCol/BLOCK_SIZE;
+        local_int_t curPos = curCol%BLOCK_SIZE;
+
+        if (curBlock != block) {
+          if (curBlock != lastDecodeBlock) {
+            PartialDecodeBlock(x, curBlock, curPos+1, tempBlock);
+            lastDecodeBlock = curBlock;
+            lastDecodePosition = curPos+1;
+          } else if(curPos >= lastDecodePosition) {
+            ResumePartialDecodeBlock(x, curBlock, curPos+1, lastDecodePosition, tempBlock);
+            lastDecodePosition = curPos+1;
           }
-          sum -= currentValues[j] * tempBlock[curCol%BLOCK_SIZE];
-        } else if (curCol%BLOCK_SIZE != k) {// Exclude diagonal contribution
-          sum -= currentValues[j] * xBlock[curCol%BLOCK_SIZE];
+          sum -= currentValues[j] * tempBlock[curPos];
+        } else if (curPos != k) {// Exclude diagonal contribution
+          sum -= currentValues[j] * xBlock[curPos];
         }
       }
 
@@ -175,14 +196,21 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
       for (int j=0; j< currentNumberOfNonzeros; j++) {
         local_int_t curCol = currentColIndices[j];
-        if (curCol/BLOCK_SIZE != block) {
-          if (curCol/BLOCK_SIZE != last_decode) {
-            last_decode = curCol/BLOCK_SIZE;
-            DecodeBlock(x, last_decode, tempBlock);
+        local_int_t curBlock = curCol/BLOCK_SIZE;
+        local_int_t curPos = curCol%BLOCK_SIZE;
+
+        if (curBlock != block) {
+          if (curBlock != lastDecodeBlock) {
+            PartialDecodeBlock(x, curBlock, curPos+1, tempBlock);
+            lastDecodeBlock = curBlock;
+            lastDecodePosition = curPos+1;
+          } else if(curPos >= lastDecodePosition) {
+            ResumePartialDecodeBlock(x, curBlock, curPos+1, lastDecodePosition, tempBlock);
+            lastDecodePosition = curPos+1;
           }
-          sum -= currentValues[j] * tempBlock[curCol%BLOCK_SIZE];
-        } else if (curCol%BLOCK_SIZE != k) {// Exclude diagonal contribution
-          sum -= currentValues[j] * xBlock[curCol%BLOCK_SIZE];
+          sum -= currentValues[j] * tempBlock[curPos];
+        } else if (curPos != k) {// Exclude diagonal contribution
+          sum -= currentValues[j] * xBlock[curPos];
         }
       }
 
