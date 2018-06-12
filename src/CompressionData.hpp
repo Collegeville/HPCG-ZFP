@@ -18,7 +18,7 @@
 /*!
   The number of values stored per block
 */
-constexpr const int BLOCK_SIZE = 8;
+constexpr const int BLOCK_SIZE = 12;
 
 /*!
   Whether to cache align the starts of blocks
@@ -61,7 +61,7 @@ constexpr const int errorMode = PW_REL;
 
 //error bounds as per SZ
 constexpr const double ABS_ERROR_BOUND = 1e-6;
-constexpr const double PWREL_BOUND_RATIO = 1.0e-14;
+constexpr const double PWREL_BOUND_RATIO = 1.0e-10;
 
 
 constexpr const int UNCOMPRESSED = 0x00;

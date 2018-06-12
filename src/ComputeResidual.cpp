@@ -60,8 +60,8 @@ int ComputeResidual(const local_int_t n, const Vector & v1, const Vector & v2, d
 
     #pragma omp for
     for (local_int_t block = 0; block<n/BLOCK_SIZE; block++){
-      DecodeBlock(v1, block, v1Block);
-      DecodeBlock(v2, block, v2Block);
+      PartialDecodeBlock(v1, block, BLOCK_SIZE, v1Block);
+      PartialDecodeBlock(v2, block, BLOCK_SIZE, v2Block);
       for (int j = 0; j < BLOCK_SIZE; j++) {
         double diff = std::fabs(v1Block[j] - v2Block[j]);
         if (diff > threadlocal_residual) threadlocal_residual = diff;
@@ -69,8 +69,8 @@ int ComputeResidual(const local_int_t n, const Vector & v1, const Vector & v2, d
     }
     #pragma omp single nowait
     if (n%BLOCK_SIZE) {
-      DecodeBlock(v1, n/BLOCK_SIZE, v1Block);
-      DecodeBlock(v2, n/BLOCK_SIZE, v2Block);
+      PartialDecodeBlock(v1, n/BLOCK_SIZE, n%BLOCK_SIZE, v1Block);
+      PartialDecodeBlock(v2, n/BLOCK_SIZE, n%BLOCK_SIZE, v2Block);
       for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
         double diff = std::fabs(v1Block[j] - v2Block[j]);
         if (diff > threadlocal_residual) threadlocal_residual = diff;
@@ -85,8 +85,8 @@ int ComputeResidual(const local_int_t n, const Vector & v1, const Vector & v2, d
   for (local_int_t block = 0; block<n/BLOCK_SIZE; i++) {
     double v1Block[BLOCK_SIZE];
     double v2Block[BLOCK_SIZE];
-    DecodeBlock(v1, block, v1Block);
-    DecodeBlock(v2, block, v2Block);
+    PartialDecodeBlock(v1, block, BLOCK_SIZE, v1Block);
+    PartialDecodeBlock(v2, block, BLOCK_SIZE, v2Block);
     for (int j = 0; j < BLOCK_SIZE; j++) {
       double diff = std::fabs(v1Block[j] - v2Block[j]);
       if (diff > local_residual) local_residual = diff;
@@ -96,8 +96,8 @@ int ComputeResidual(const local_int_t n, const Vector & v1, const Vector & v2, d
     double v1Block[BLOCK_SIZE];
     double v2Block[BLOCK_SIZE];
     local_int_t count;
-    DecodeBlock(v1, n/BLOCK_SIZE, v1Block);
-    DecodeBlock(v2, n/BLOCK_SIZE, v2Block);
+    PartialDecodeBlock(v1, n/BLOCK_SIZE, n%BLOCK_SIZE, v1Block);
+    PartialDecodeBlock(v2, n/BLOCK_SIZE, n%BLOCK_SIZE, v2Block);
     for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
       double diff = std::fabs(v1Block[j] - v2Block[j]);
       if (diff > local_residual) local_residual = diff;

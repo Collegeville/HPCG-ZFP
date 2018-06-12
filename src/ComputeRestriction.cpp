@@ -47,12 +47,16 @@ int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
     double rcBlock[BLOCK_SIZE];
     double rfBlock[BLOCK_SIZE];
     double AxfBlock[BLOCK_SIZE];
+    local_int_t last_decode = -1;
 
     local_int_t i = block*BLOCK_SIZE;
     for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
       local_int_t dest = f2c[i+j];
-      DecodeBlock(rf, dest/BLOCK_SIZE, rfBlock);
-      DecodeBlock(Axf, dest/BLOCK_SIZE, AxfBlock);
+      if(dest/BLOCK_SIZE != last_decode) {
+        last_decode = dest/BLOCK_SIZE;
+        DecodeBlock(rf, last_decode, rfBlock);
+        DecodeBlock(Axf, last_decode, AxfBlock);
+      }
       rcBlock[j] = rfBlock[dest%BLOCK_SIZE] - AxfBlock[dest%BLOCK_SIZE];
     }
     EncodeBlock(rc, block, rcBlock);
@@ -64,11 +68,15 @@ int ComputeRestriction(const SparseMatrix & A, const Vector & rf) {
 
     local_int_t block = nc/BLOCK_SIZE;
     local_int_t i = block*BLOCK_SIZE;
+    local_int_t last_decode = -1;
 
     for (local_int_t j = 0; j < nc%BLOCK_SIZE; j++) {
       local_int_t dest = f2c[i+j];
-      DecodeBlock(rf, dest/BLOCK_SIZE, rfBlock);
-      DecodeBlock(Axf, dest/BLOCK_SIZE, AxfBlock);
+      if(dest/BLOCK_SIZE != last_decode) {
+        last_decode = dest/BLOCK_SIZE;
+        DecodeBlock(rf, last_decode, rfBlock);
+        DecodeBlock(Axf, last_decode, AxfBlock);
+      }
       rcBlock[j] = rfBlock[dest%BLOCK_SIZE] - AxfBlock[dest%BLOCK_SIZE];
     }
     EncodeBlock(rc, nc/BLOCK_SIZE, rcBlock);

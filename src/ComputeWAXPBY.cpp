@@ -59,8 +59,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
       double yBlock[BLOCK_SIZE];
       double wBlock[BLOCK_SIZE];
 
-      DecodeBlock(x, block, xBlock);
-      DecodeBlock(y, block, yBlock);
+      PartialDecodeBlock(x, block, BLOCK_SIZE, xBlock);
+      PartialDecodeBlock(y, block, BLOCK_SIZE, yBlock);
       for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
         wBlock[j] = xBlock[j] + beta * yBlock[j];
       }
@@ -71,8 +71,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
       double yBlock[BLOCK_SIZE];
       double wBlock[BLOCK_SIZE];
 
-      DecodeBlock(x, n/BLOCK_SIZE, xBlock);
-      DecodeBlock(y, n/BLOCK_SIZE, yBlock);
+      PartialDecodeBlock(x, n/BLOCK_SIZE, n%BLOCK_SIZE, xBlock);
+      PartialDecodeBlock(y, n/BLOCK_SIZE, n%BLOCK_SIZE, yBlock);
       for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
         wBlock[j] = xBlock[j] + beta * yBlock[j];
       }
@@ -87,8 +87,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
       double yBlock[BLOCK_SIZE];
       double wBlock[BLOCK_SIZE];
 
-      DecodeBlock(x, block, xBlock);
-      DecodeBlock(y, block, yBlock);
+      PartialDecodeBlock(x, block, BLOCK_SIZE, xBlock);
+      PartialDecodeBlock(y, block, BLOCK_SIZE, yBlock);
       for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
         wBlock[j] = alpha * xBlock[j] + yBlock[j];
       }
@@ -99,8 +99,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
       double yBlock[BLOCK_SIZE];
       double wBlock[BLOCK_SIZE];
 
-      DecodeBlock(x, n/BLOCK_SIZE, xBlock);
-      DecodeBlock(y, n/BLOCK_SIZE, yBlock);
+      PartialDecodeBlock(x, n/BLOCK_SIZE, n%BLOCK_SIZE, xBlock);
+      PartialDecodeBlock(y, n/BLOCK_SIZE, n%BLOCK_SIZE, yBlock);
       for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
         wBlock[j] = alpha * xBlock[j] + yBlock[j];
       }
@@ -115,8 +115,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
       double yBlock[BLOCK_SIZE];
       double wBlock[BLOCK_SIZE];
 
-      DecodeBlock(x, block, xBlock);
-      DecodeBlock(y, block, yBlock);
+      PartialDecodeBlock(x, block, BLOCK_SIZE, xBlock);
+      PartialDecodeBlock(y, block, BLOCK_SIZE, yBlock);
       for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
         wBlock[j] = alpha * xBlock[j] + beta * yBlock[j];
       }
@@ -127,8 +127,8 @@ int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
       double yBlock[BLOCK_SIZE];
       double wBlock[BLOCK_SIZE];
 
-      DecodeBlock(x, n/BLOCK_SIZE, xBlock);
-      DecodeBlock(y, n/BLOCK_SIZE, yBlock);
+      PartialDecodeBlock(x, n/BLOCK_SIZE, n%BLOCK_SIZE, xBlock);
+      PartialDecodeBlock(y, n/BLOCK_SIZE, n%BLOCK_SIZE, yBlock);
       for (local_int_t j = 0; j < n%BLOCK_SIZE; j++) {
         wBlock[j] = alpha * xBlock[j] + beta * yBlock[j];
       }

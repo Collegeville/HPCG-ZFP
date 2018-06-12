@@ -37,37 +37,44 @@ int ComputeProlongation(const SparseMatrix & Af, Vector & xf) {
   const local_int_t * f2c = Af.mgData->f2cOperator;
   const local_int_t nc = Af.mgData->rc->localLength;
 
-  #ifndef HPCG_NO_OPENMP
-    #pragma omp parallel for
-  #endif
-  for (local_int_t block = 0; block<nc/BLOCK_SIZE; block++){
-    double cBlock[BLOCK_SIZE];
-    double fBlock[BLOCK_SIZE];
+  double cBlock[BLOCK_SIZE];
+  double fBlock[BLOCK_SIZE];
+  local_int_t currentFineBlock = f2c[0]/BLOCK_SIZE;
+  DecodeBlock(xf, currentFineBlock, fBlock);
 
-    local_int_t i = block*4;
-    DecodeBlock(xc, i/BLOCK_SIZE, cBlock);
+  for (local_int_t block = 0; block < nc/BLOCK_SIZE; block++){
+    local_int_t i = block*BLOCK_SIZE;
+    PartialDecodeBlock(xc, block, BLOCK_SIZE, cBlock);
     for (local_int_t j = 0; j < BLOCK_SIZE; j++) {
       local_int_t dest = f2c[i+j];
-      DecodeBlock(xf, dest/BLOCK_SIZE, fBlock);
+      if (dest/BLOCK_SIZE != currentFineBlock) {
+        //need to encode previous block
+        EncodeBlock(xf, currentFineBlock, fBlock);
+        currentFineBlock = dest/BLOCK_SIZE;
+        DecodeBlock(xf, currentFineBlock, fBlock);
+      }
       fBlock[dest%BLOCK_SIZE] = cBlock[j];
-      EncodeBlock(xf, dest/BLOCK_SIZE, fBlock);
     }
   }
-
   if (nc%BLOCK_SIZE) {
-    double cBlock[BLOCK_SIZE];
-    double fBlock[BLOCK_SIZE];
-
     local_int_t block = nc/BLOCK_SIZE;
     local_int_t i = block*BLOCK_SIZE;
     DecodeBlock(xc, block, cBlock);
     for (local_int_t j = 0; j < nc%BLOCK_SIZE; j++) {
       local_int_t dest = f2c[i+j];
-      DecodeBlock(xf, dest/BLOCK_SIZE, fBlock);
+      if (dest/BLOCK_SIZE != currentFineBlock) {
+        //need to encode previous block before decoding next one
+        EncodeBlock(xf, currentFineBlock, fBlock);
+        currentFineBlock = dest/BLOCK_SIZE;
+        DecodeBlock(xf, currentFineBlock, fBlock);
+      }
       fBlock[dest%BLOCK_SIZE] = cBlock[j];
-      EncodeBlock(xf, dest/BLOCK_SIZE, fBlock);
     }
   }
+
+  //Encode last block needed
+  EncodeBlock(xf, currentFineBlock, fBlock);
+
 
   return 0;
 }

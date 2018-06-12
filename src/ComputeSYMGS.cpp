@@ -72,8 +72,8 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   int last_decode = -1;
 
   for (local_int_t block=0; block < nrow/BLOCK_SIZE; block++)  {
-    DecodeBlock(r, block, rBlock);
-    DecodeBlock(x, block, xBlock);
+    PartialDecodeBlock(r, block, BLOCK_SIZE, rBlock);
+    PartialDecodeBlock(x, block, BLOCK_SIZE,xBlock);
 
     local_int_t i = block*BLOCK_SIZE;
     for (local_int_t k = 0; k < BLOCK_SIZE; k++) {
@@ -162,8 +162,8 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
     EncodeBlock(x, block, xBlock);
   }
   for (local_int_t block=(nrow/BLOCK_SIZE) - 1; block >= 0; block--)  {
-    DecodeBlock(r, block, rBlock);
-    DecodeBlock(x, block, xBlock);
+    PartialDecodeBlock(r, block, BLOCK_SIZE, rBlock);
+    PartialDecodeBlock(x, block, BLOCK_SIZE, xBlock);
 
     local_int_t i = block*BLOCK_SIZE;
     for (local_int_t k = BLOCK_SIZE-1; k >=0; k--) {

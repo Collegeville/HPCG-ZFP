@@ -64,11 +64,18 @@ inline void ZeroVector(Vector & v) {
     double vBlock [BLOCK_SIZE] = {};
     local_int_t numBlocks = ceil(localLength/(double)BLOCK_SIZE);
 
+
     #ifndef HPCG_NO_OPENMP
       #pragma omp parallel for
     #endif
     for (local_int_t block = 0; block < numBlocks; block++){
-      EncodeBlock(v, block, vBlock);
+      char * data = (char*)v.optimizationData+block*BLOCK_BYTES;
+      
+      data[0] = UNCOMPRESSED << 6 | NEIGHBOR << 4 | NEIGHBOR << 2 | NEIGHBOR;
+      for(int i = 1; i < COMPRESSED_BYTES; i++) {
+        data[i] = NEIGHBOR << 6 | NEIGHBOR << 4 | NEIGHBOR << 2 | NEIGHBOR;
+      }
+      ((double*)((void*)((char*)data+COMPRESSED_BYTES)))[0] = 0;
     }
   } else {
     double * vv = v.values;
