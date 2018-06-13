@@ -70,8 +70,9 @@ inline void ZeroVector(Vector & v) {
     #endif
     for (local_int_t block = 0; block < numBlocks; block++){
       char * data = (char*)v.optimizationData+block*BLOCK_BYTES;
-      
-      data[0] = UNCOMPRESSED << 6 | NEIGHBOR << 4 | NEIGHBOR << 2 | NEIGHBOR;
+
+      //compression modes in a byte are in reverse order
+      data[0] = NEIGHBOR << 6 | NEIGHBOR << 4 | NEIGHBOR << 2 | UNCOMPRESSED;
       for(int i = 1; i < COMPRESSED_BYTES; i++) {
         data[i] = NEIGHBOR << 6 | NEIGHBOR << 4 | NEIGHBOR << 2 | NEIGHBOR;
       }

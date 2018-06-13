@@ -25,7 +25,7 @@ inline int DoDecode(const local_int_t startIndex, const local_int_t blockLength,
 
   for (int index = startIndex; index < blockLength; index++) {
     double value;
-    switch((compressed[index/4] >> (2*(3-index%4)))&0x03) {
+    switch((compressed[index/4] >> (2*(index&0b11)))&0b11) {
       case UNCOMPRESSED:
         value = uncompressedArray[uncompressedCount];
         uncompressedCount++;

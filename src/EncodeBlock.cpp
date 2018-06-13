@@ -48,7 +48,7 @@ inline void useUncompressed(const double value, double (& previousElements)[4], 
 
 inline void tryNeighborCompression(const double value, const double neighborErr, double (& previousElements)[4], char * compressed, double * uncompressedArray, const int index, int & uncompressedCount) {
   if (withinTolerance(value, neighborErr)) {
-    compressed[index/4] |= NEIGHBOR << (2*(3-index%4));
+    compressed[index/4] |= NEIGHBOR << (2*(index%4));
     previousElements[index%4] = previousElements[(index-1)%4];
   } else {
     useUncompressed(value, previousElements, uncompressedArray, index, uncompressedCount);
@@ -57,7 +57,7 @@ inline void tryNeighborCompression(const double value, const double neighborErr,
 
 inline void tryLinearCompression(const double value, const double linPredict, const double linErr, double (& previousElements)[4], char * compressed, double * uncompressedArray,  const int index, int & uncompressedCount) {
   if (withinTolerance(value, linErr)) {
-    compressed[index/4] |= LINEAR << (2*(3-index%4));
+    compressed[index/4] |= LINEAR << (2*(index%4));
     previousElements[index%4] = linPredict;
   } else {
     useUncompressed(value, previousElements, uncompressedArray, index, uncompressedCount);
@@ -66,7 +66,7 @@ inline void tryLinearCompression(const double value, const double linPredict, co
 
 inline void tryQuadraticCompression(const double value, const double quadPredict, const double quadErr, double (& previousElements)[4], char * compressed, double * uncompressedArray,  const int index, int & uncompressedCount) {
   if (withinTolerance(value, quadErr)) {
-    compressed[index/4] |= QUADRATIC << (2*(3-index%4));
+    compressed[index/4] |= QUADRATIC << (2*(index%4));
     previousElements[index%4] = quadPredict;
   } else {
     useUncompressed(value, previousElements, uncompressedArray, index, uncompressedCount);
