@@ -19,6 +19,36 @@
  */
 
 #include "OptimizeProblem.hpp"
+#include <iostream>
+#include "OptimizedData.hpp"
+#include "zfparray1.h"
+
+double optimization_allocation = 0.0;
+
+
+/*!
+  helper function to create ZFP arrays for vectors
+
+  @param[inout] vect   The vector to create a zfp array for
+
+  @return returns the number of bytes used for the array
+*/
+int CreateZFPArray(SparseMatrix & mat){
+  zfp::array1d * arrays = new zfp::array1d[mat.localNumberOfRows];
+  zfp::array1d::pointer * diagonal = new zfp::array1d::pointer[mat.localNumberOfRows];
+  local_int_t size = 0;
+  for (int i = 0; i < mat.localNumberOfRows; i++) {
+    arrays[i] = zfp::array1d(mat.nonzerosInRow[i], 32, mat.matrixValues[i], 4*8*2);
+    diagonal[i] = (&(arrays[i][0])) + (mat.matrixDiagonal[i] - mat.matrixValues[i]);
+    size += sizeof(arrays[i]) + arrays[i].compressed_size() + arrays[i].cache_size();
+  }
+  OptimizedData * data = new OptimizedData();
+  data->matrixValues = arrays;
+  data->matrixDiagonal = diagonal;
+  mat.optimizationData = data;
+  return size + sizeof(*data);
+}
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +125,22 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  double bytes_used = 0;
+
+  SparseMatrix * Anext = &A;
+
+  while (Anext) {
+    CreateZFPArray(*Anext);
+    Anext = Anext->Ac;
+  }
+  optimization_allocation = bytes_used;
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimization_allocation;
 
 }

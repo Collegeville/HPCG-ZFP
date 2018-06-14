@@ -27,6 +27,7 @@
 #include "Geometry.hpp"
 #include "Vector.hpp"
 #include "MGData.hpp"
+#include "OptimizedData.hpp"
 
 struct SparseMatrix_STRUCT {
   char  * title; //!< name of the sparse matrix
@@ -166,6 +167,12 @@ inline void DeleteMatrix(SparseMatrix & A) {
   if (A.geom!=0) { delete A.geom; A.geom = 0;}
   if (A.Ac!=0) { DeleteMatrix(*A.Ac); delete A.Ac; A.Ac = 0;} // Delete coarse matrix
   if (A.mgData!=0) { DeleteMGData(*A.mgData); delete A.mgData; A.mgData = 0;} // Delete MG data
+
+  if (A.optimizationData) {
+    DeleteOptimizedData(*(OptimizedData*)A.optimizationData);
+    delete (OptimizedData*)A.optimizationData;
+    A.optimizationData = 0;
+  }
   return;
 }
 
