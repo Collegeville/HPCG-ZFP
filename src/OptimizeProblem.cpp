@@ -38,7 +38,7 @@ int CreateZFPArray(SparseMatrix & mat){
   zfp::array1d::pointer * diagonal = new zfp::array1d::pointer[mat.localNumberOfRows];
   local_int_t size = 0;
   for (int i = 0; i < mat.localNumberOfRows; i++) {
-    arrays[i] = zfp::array1d(mat.nonzerosInRow[i], 32, mat.matrixValues[i], 4*8*2);
+    arrays[i] = zfp::array1d(mat.nonzerosInRow[i], 32, mat.matrixValues[i], 4*8);
     diagonal[i] = (&(arrays[i][0])) + (mat.matrixDiagonal[i] - mat.matrixValues[i]);
     size += sizeof(arrays[i]) + arrays[i].compressed_size() + arrays[i].cache_size();
   }

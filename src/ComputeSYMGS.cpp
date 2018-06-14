@@ -18,8 +18,11 @@
  HPCG routine
  */
 
+#ifndef HPCG_NO_MPI
+#include "ExchangeHalo.hpp"
+#endif
 #include "ComputeSYMGS.hpp"
-#include "ComputeSYMGS_ref.hpp"
+#include <cassert>
 
 /*!
   Routine to one step of symmetrix Gauss-Seidel:
@@ -49,7 +52,53 @@
 */
 int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
-  // This line and the next two lines should be removed and your version of ComputeSYMGS should be used.
-  return ComputeSYMGS_ref(A, r, x);
+  assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
+
+#ifndef HPCG_NO_MPI
+  ExchangeHalo(A,x);
+#endif
+
+  const local_int_t nrow = A.localNumberOfRows;
+  zfp::array1d * matrixValues = ((OptimizedData*)A.optimizationData)->matrixValues;
+  zfp::array1d::pointer * matrixDiagonal = ((OptimizedData*)A.optimizationData)->matrixDiagonal;  // An array of pointers to the diagonal entries A.matrixValues
+  const double * const rv = r.values;
+  double * const xv = x.values;
+
+  for (local_int_t i=0; i< nrow; i++) {
+    const zfp::array1d & currentValues = matrixValues[i];
+    const local_int_t * const currentColIndices = A.mtxIndL[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+    const double currentDiagonal = *(matrixDiagonal[i]); // Current diagonal value
+    double sum = rv[i]; // RHS value
+
+    for (int j=0; j< currentNumberOfNonzeros; j++) {
+      local_int_t curCol = currentColIndices[j];
+      sum -= currentValues[j] * xv[curCol];
+    }
+    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+    xv[i] = sum/currentDiagonal;
+
+  }
+
+  // Now the back sweep.
+
+  for (local_int_t i=nrow-1; i>=0; i--) {
+    const zfp::array1d & currentValues = matrixValues[i];
+    const local_int_t * const currentColIndices = A.mtxIndL[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+    const double  currentDiagonal = *(matrixDiagonal[i]); // Current diagonal value
+    double sum = rv[i]; // RHS value
+
+    for (int j = 0; j< currentNumberOfNonzeros; j++) {
+      local_int_t curCol = currentColIndices[j];
+      sum -= currentValues[j]*xv[curCol];
+    }
+    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+    xv[i] = sum/currentDiagonal;
+  }
+
+  return 0;
 
 }

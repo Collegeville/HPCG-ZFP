@@ -117,10 +117,10 @@ inline void InitializeSparseMatrix(SparseMatrix & A, Geometry * geom) {
   @param[inout] diagonal  Vector of diagonal values (must be allocated before call to this function).
  */
 inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
-    double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
-    assert(A.localNumberOfRows==diagonal.localLength);
-    for (local_int_t i=0; i<A.localNumberOfRows; ++i) dv[i] = *(curDiagA[i]);
+  double * dv = diagonal.values;
+  assert(A.localNumberOfRows==diagonal.localLength);
+  double ** curDiagA = A.matrixDiagonal;
+  for (local_int_t i=0; i<A.localNumberOfRows; ++i) dv[i] = *(curDiagA[i]);
   return;
 }
 /*!
@@ -130,10 +130,15 @@ inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
   @param[in] diagonal  Vector of diagonal values that will replace existing matrix diagonal values.
  */
 inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
-    double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
-    assert(A.localNumberOfRows==diagonal.localLength);
+  double ** curDiagA = A.matrixDiagonal;
+  double * dv = diagonal.values;
+  assert(A.localNumberOfRows==diagonal.localLength);
+  if (A.optimizationData) {
+    zfp::array1d::pointer * curDiagAOpt = ((OptimizedData*)A.optimizationData)->matrixDiagonal;
+    for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagAOpt[i]) = *(curDiagA[i]) = dv[i];
+  } else {
     for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+  }
   return;
 }
 /*!
