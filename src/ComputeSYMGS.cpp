@@ -18,8 +18,11 @@
  HPCG routine
  */
 
+#ifndef HPCG_NO_MPI
+#include "ExchangeHalo.hpp"
+#endif
 #include "ComputeSYMGS.hpp"
-#include "ComputeSYMGS_ref.hpp"
+#include <cassert>
 
 /*!
   Routine to one step of symmetrix Gauss-Seidel:
@@ -49,7 +52,63 @@
 */
 int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
-  // This line and the next two lines should be removed and your version of ComputeSYMGS should be used.
-  return ComputeSYMGS_ref(A, r, x);
+  assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
+
+#ifndef HPCG_NO_MPI
+  ExchangeHalo(A,x);
+#endif
+
+  const local_int_t nrow = A.localNumberOfRows;
+  local_int_t * rowStarts = ((CompressionData*)A.optimizationData)->rowStarts;
+  local_int_t * diagonalIndices = ((CompressionData*)A.optimizationData)->diagonalIndices;  // An array of pointers to the diagonal entries A.matrixValues
+  double currentBlock[4];
+  double diagCurrentBlock[4];
+  const double * const rv = r.values;
+  double * const xv = x.values;
+
+  for (local_int_t i=0; i< nrow; i++) {
+    local_int_t matrixRowStart = rowStarts[i];
+    const local_int_t * const currentColIndices = A.mtxIndL[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+    DecodeBlock(A, diagonalIndices[i]/4, diagCurrentBlock);
+    const double currentDiagonal = diagCurrentBlock[(diagonalIndices[i])%4]; // Current diagonal value
+    double sum = rv[i]; // RHS value
+
+    for (int j=0; j< currentNumberOfNonzeros; j++) {
+      if ((matrixRowStart+j)%4 == 0) {
+        DecodeBlock(A, (matrixRowStart+j)/4, currentBlock);
+      }
+      local_int_t curCol = currentColIndices[j];
+      sum -= currentBlock[(matrixRowStart+j)%4] * xv[curCol];
+    }
+    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+    xv[i] = sum/currentDiagonal;
+
+  }
+
+  // Now the back sweep.
+
+  for (local_int_t i=nrow-1; i>=0; i--) {
+    local_int_t matrixRowStart = rowStarts[i];
+    const local_int_t * const currentColIndices = A.mtxIndL[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+    DecodeBlock(A, diagonalIndices[i]/4, diagCurrentBlock);
+    const double currentDiagonal = diagCurrentBlock[(diagonalIndices[i])%4]; // Current diagonal value
+    double sum = rv[i]; // RHS value
+
+    for (int j = currentNumberOfNonzeros-1; j >= 0; j--) {
+      if ((matrixRowStart+j)%4 == 3) {
+        DecodeBlock(A, (matrixRowStart+j)/4, currentBlock);
+      }
+      local_int_t curCol = currentColIndices[j];
+      sum -= currentBlock[(matrixRowStart+j)%4]*xv[curCol];
+    }
+    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+    xv[i] = sum/currentDiagonal;
+  }
+
+  return 0;
 
 }
