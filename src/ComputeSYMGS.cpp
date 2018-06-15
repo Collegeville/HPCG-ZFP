@@ -72,7 +72,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
       for (int j=0; j< currentNumberOfNonzeros; j++) {
         local_int_t curCol = currentColIndices[j];
-        sum -= ((currentValues&(1<<j))?26:-1) * xv[curCol];
+        sum -= (((currentValues>>j)&1)*27.0-1.0) * xv[curCol];
       }
       sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
@@ -91,7 +91,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
       for (int j = 0; j< currentNumberOfNonzeros; j++) {
         local_int_t curCol = currentColIndices[j];
-        sum -= ((currentValues&(1<<j))?26:-1) * xv[curCol];
+        sum -= (((currentValues>>j)&1)*27.0-1.0) * xv[curCol];
       }
       sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
