@@ -19,7 +19,10 @@
  */
 
 #include "ComputeSYMGS.hpp"
-#include "ComputeSYMGS_ref.hpp"
+#ifndef HPCG_NO_MPI
+#include "ExchangeHalo.hpp"
+#endif
+#include <cassert>
 
 /*!
   Routine to one step of symmetrix Gauss-Seidel:
@@ -49,7 +52,51 @@
 */
 int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
-  // This line and the next two lines should be removed and your version of ComputeSYMGS should be used.
-  return ComputeSYMGS_ref(A, r, x);
+    assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
 
-}
+  #ifndef HPCG_NO_MPI
+    ExchangeHalo(A,x);
+  #endif
+
+    const local_int_t nrow = A.localNumberOfRows;
+    const int * matrixValues = (int*)A.optimizationData;
+    const double * const rv = r.values;
+    double * const xv = x.values;
+
+    for (local_int_t i=0; i< nrow; i++) {
+      const int currentValues = matrixValues[i];
+      const local_int_t * const currentColIndices = A.mtxIndL[i];
+      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+      const double  currentDiagonal = 26;
+      double sum = rv[i]; // RHS value
+
+      for (int j=0; j< currentNumberOfNonzeros; j++) {
+        local_int_t curCol = currentColIndices[j];
+        sum -= (((currentValues>>j)&1)*27-1) * xv[curCol];
+      }
+      sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+      xv[i] = sum/currentDiagonal;
+
+    }
+
+    // Now the back sweep.
+
+    for (local_int_t i=nrow-1; i>=0; i--) {
+      const int currentValues = matrixValues[i];
+      const local_int_t * const currentColIndices = A.mtxIndL[i];
+      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+      const double  currentDiagonal = 26;
+      double sum = rv[i]; // RHS value
+
+      for (int j = 0; j< currentNumberOfNonzeros; j++) {
+        local_int_t curCol = currentColIndices[j];
+        sum -= (((currentValues>>j)&1)*27-1)*xv[curCol];
+      }
+      sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+      xv[i] = sum/currentDiagonal;
+    }
+
+    return 0;
+  }
