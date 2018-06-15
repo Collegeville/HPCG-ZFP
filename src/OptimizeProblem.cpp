@@ -19,6 +19,70 @@
  */
 
 #include "OptimizeProblem.hpp"
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+#include "CompressionData.hpp"
+#include <iostream>
+#include "zfparray1.h"
+
+double optimization_allocation = 0.0;
+
+
+/*!
+  helper function to create ZFP arrays for vectors
+
+  @param[inout] vect   The vector to create a zfp array for
+
+  @return returns the number of bytes used for the array
+*/
+int CreateZFPArray(SparseMatrix & mat){
+
+  CompressionData * data = new CompressionData();
+  mat.optimizationData = data;
+
+  data->bufferSize = blockRate * ceil(mat.localNumberOfNonzeros/4.0);
+  data->buffer = new uint8_t[data->bufferSize];
+  assert(data->buffer);
+  data->stream = stream_open(data->buffer, data->bufferSize);
+  assert(data->stream);
+
+  zfp_stream * zfp = zfp_stream_open(data->stream);
+  assert(zfp);
+  data->zfp = zfp;
+  double actualRate = zfp_stream_set_rate(zfp, bitRate, zfp_type_double, 1, 1);
+  assert(actualRate == (double)bitRate);
+
+  local_int_t * rowStarts = new local_int_t[mat.localNumberOfRows];
+  data->rowStarts = rowStarts;
+  local_int_t * diagonalIndices = new local_int_t[mat.localNumberOfRows];
+  data->diagonalIndices = diagonalIndices;
+
+  local_int_t position = 0;
+  double currentBlock [4];
+  for (int i = 0; i < mat.localNumberOfRows; i++) {
+    int nnz = mat.nonzerosInRow[i];
+    rowStarts[i] = position;
+    diagonalIndices[i] = rowStarts[i] + (mat.matrixDiagonal[i] - mat.matrixValues[i]);
+    for (int j = 0; j < nnz; j++) {
+      currentBlock[(position+j)%4] = mat.matrixValues[i][j];
+      if ((position+j)%4 == 3) {
+        EncodeFullBlock(mat, (position+j)/4, currentBlock);
+      }
+    }
+    position += nnz;
+  }
+  if (position%4) {
+    EncodeBlock(mat, position/4, currentBlock);
+  }
+
+  return sizeof(*data)
+          + data->bufferSize //buffer
+          + sizeof(uint)+stream_word_bits+3*sizeof(uint64*); //sizeof(*data->stream)
+          + sizeof(*data->zfp)
+          + sizeof(local_int_t)*2*mat.localNumberOfRows; //rowStarts & diagonalIndices
+}
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +159,22 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  double bytes_used = 0;
+
+  SparseMatrix * Anext = &A;
+
+  while (Anext) {
+    bytes_used += CreateZFPArray(*Anext);
+    Anext = Anext->Ac;
+  }
+  optimization_allocation = bytes_used;
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimization_allocation;
 
 }

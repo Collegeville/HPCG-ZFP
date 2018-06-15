@@ -41,18 +41,18 @@ struct CompressionData_STRUCT {
 typedef struct CompressionData_STRUCT CompressionData;
 
 inline void DeleteCompressionData(CompressionData & data) {
-  if (data.zip) {
+  if (data.zfp) {
     zfp_stream_close(data.zfp);
     data.zfp = 0;
   }
   if (data.stream) {
     stream_close(data.stream);
-    data.stream = 0
+    data.stream = 0;
   }
   if (data.buffer) {
     delete [] data.buffer;
     data.buffer = 0;
-    bufferSize = 0;
+    data.bufferSize = 0;
   }
   if (data.diagonalIndices) {
     delete [] data.diagonalIndices;

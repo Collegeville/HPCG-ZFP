@@ -27,6 +27,9 @@
 #include "Geometry.hpp"
 #include "Vector.hpp"
 #include "MGData.hpp"
+#include "CompressionData.hpp"
+#include "EncodeBlock.hpp"
+#include "DecodeBlock.hpp"
 
 struct SparseMatrix_STRUCT {
   char  * title; //!< name of the sparse matrix
@@ -116,10 +119,10 @@ inline void InitializeSparseMatrix(SparseMatrix & A, Geometry * geom) {
   @param[inout] diagonal  Vector of diagonal values (must be allocated before call to this function).
  */
 inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
-    double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
-    assert(A.localNumberOfRows==diagonal.localLength);
-    for (local_int_t i=0; i<A.localNumberOfRows; ++i) dv[i] = *(curDiagA[i]);
+  double * dv = diagonal.values;
+  assert(A.localNumberOfRows==diagonal.localLength);
+  double ** curDiagA = A.matrixDiagonal;
+  for (local_int_t i=0; i<A.localNumberOfRows; ++i) dv[i] = *(curDiagA[i]);
   return;
 }
 /*!
@@ -129,10 +132,21 @@ inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
   @param[in] diagonal  Vector of diagonal values that will replace existing matrix diagonal values.
  */
 inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
-    double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
-    assert(A.localNumberOfRows==diagonal.localLength);
+  double ** curDiagA = A.matrixDiagonal;
+  double * dv = diagonal.values;
+  assert(A.localNumberOfRows==diagonal.localLength);
+  if (A.optimizationData) {
+    local_int_t * diagonalIndices = ((CompressionData*)A.optimizationData)->diagonalIndices;
+    double currentBlock[4];
+    for (local_int_t i=0; i<A.localNumberOfRows; ++i){
+      DecodeBlock(A, diagonalIndices[i]/4, currentBlock);
+      currentBlock[diagonalIndices[i]%4] = dv[i];
+      EncodeBlock(A, diagonalIndices[i]/4, currentBlock);
+      *(curDiagA[i]) = dv[i];
+    }
+  } else {
     for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+  }
   return;
 }
 /*!
@@ -166,6 +180,12 @@ inline void DeleteMatrix(SparseMatrix & A) {
   if (A.geom!=0) { delete A.geom; A.geom = 0;}
   if (A.Ac!=0) { DeleteMatrix(*A.Ac); delete A.Ac; A.Ac = 0;} // Delete coarse matrix
   if (A.mgData!=0) { DeleteMGData(*A.mgData); delete A.mgData; A.mgData = 0;} // Delete MG data
+
+  if (A.optimizationData) {
+    DeleteCompressionData(*(CompressionData*)A.optimizationData);
+    delete (CompressionData*)A.optimizationData;
+    A.optimizationData = 0;
+  }
   return;
 }
 
