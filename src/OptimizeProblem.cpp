@@ -41,13 +41,17 @@ int CreateCompressedArray(SparseMatrix & mat){
 
   CompressionData * data = new CompressionData();
   data->forwardCompressed = new unsigned char[neededCompression];
+  assert(data->forwardCompressed);
   data->forwardUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->forwardUncompressed);
   data->backwardCompressed = new unsigned char[neededCompression];
+  assert(data->backwardCompressed);
   data->backwardUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->backwardUncompressed);
   mat.optimizationData = data;
 
   EncodeIndices(mat, true);
-  EncodeIndices(mat, false);
+  //EncodeIndices(mat, false);
 
   return sizeof(*data)  //structure itself
           + 2*sizeof(unsigned char)*neededCompression //compressed arrays

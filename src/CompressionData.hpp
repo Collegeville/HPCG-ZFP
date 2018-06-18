@@ -27,19 +27,19 @@ typedef CompressionData_STRUCT CompressionData;
 
 inline void DeleteCompressionData(CompressionData & data) {
   if (data.forwardCompressed) {
-    delete data.forwardCompressed;
+    delete [] data.forwardCompressed;
     data.forwardCompressed = 0;
   }
   if (data.forwardUncompressed) {
-    delete data.forwardUncompressed;
+    delete [] data.forwardUncompressed;
     data.forwardUncompressed = 0;
   }
   if (data.backwardCompressed) {
-    delete data.backwardCompressed;
+    delete [] data.backwardCompressed;
     data.backwardCompressed = 0;
   }
   if (data.backwardUncompressed) {
-    delete data.backwardUncompressed;
+    delete [] data.backwardUncompressed;
     data.backwardUncompressed = 0;
   }
 }
