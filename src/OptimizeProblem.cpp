@@ -19,6 +19,42 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+#include <cassert>
+#include <cmath>
+#include "CompressionData.hpp"
+#include "EncodeIndices.hpp"
+
+double optimizationAllocation = 0.0;
+
+
+/*!
+  helper function to create compressionData
+
+  @param[inout] mat   The matrix to optimize
+
+  @return the number of bytes used
+*/
+int CreateCompressedArray(SparseMatrix & mat){
+
+  local_int_t neededCompression = ceil(mat.localNumberOfNonzeros/8);
+
+  CompressionData * data = new CompressionData();
+  data->forwardCompressed = new unsigned char[neededCompression];
+  data->forwardUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  data->backwardCompressed = new unsigned char[neededCompression];
+  data->backwardUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  mat.optimizationData = data;
+
+  EncodeIndices(mat, true);
+  EncodeIndices(mat, false);
+
+  return sizeof(*data)  //structure itself
+          + 2*sizeof(unsigned char)*neededCompression //compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros; // uncompressed arrays
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +131,20 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  optimizationAllocation = 0;
+
+  SparseMatrix * Anext = &A;
+  while (Anext) {
+    optimizationAllocation += CreateCompressedArray(*Anext);
+    Anext = Anext->Ac;
+  }
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimizationAllocation;
 
 }
