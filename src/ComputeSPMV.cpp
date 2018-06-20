@@ -28,6 +28,8 @@
 #include <omp.h>
 #endif
 #include <cassert>
+#include "DecodeNextIndex.hpp"
+
 
 /*!
   Routine to compute sparse matrix vector product y = Ax where:
@@ -47,28 +49,33 @@
 */
 int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
 
-    assert(x.localLength>=A.localNumberOfColumns); // Test vector lengths
-    assert(y.localLength>=A.localNumberOfRows);
+  assert(x.localLength>=A.localNumberOfColumns); // Test vector lengths
+  assert(y.localLength>=A.localNumberOfRows);
 
-  #ifndef HPCG_NO_MPI
-      ExchangeHalo(A,x);
-  #endif
-    const double * const xv = x.values;
-    double * const yv = y.values;
-    const local_int_t nrow = A.localNumberOfRows;
-    const int * matrixValues = (int*)A.optimizationData;
-  #ifndef HPCG_NO_OPENMP
-    #pragma omp parallel for
-  #endif
-    for (local_int_t i=0; i< nrow; i++)  {
-      double sum = 0.0;
-      const int cur_vals = matrixValues[i];
-      const local_int_t * const cur_inds = A.mtxIndL[i];
-      const int cur_nnz = A.nonzerosInRow[i];
+#ifndef HPCG_NO_MPI
+    ExchangeHalo(A,x);
+#endif
+  const double * const xv = x.values;
+  double * const yv = y.values;
+  const local_int_t nrow = A.localNumberOfRows;
+  int * matrixValues = ((CompressionData*)A.optimizationData)->values;
 
-      for (int j=0; j< cur_nnz; j++)
-        sum += (((cur_vals>>j)&1)*27.0-1.0) * xv[cur_inds[j]];
-      yv[i] = sum;
+  local_int_t indexId = 0;
+  local_int_t uCount = 0;
+  local_int_t curCol = -20;
+
+//#ifndef HPCG_NO_OPENMP
+//  #pragma omp parallel for
+//#endif
+  for (local_int_t i=0; i< nrow; i++)  {
+    double sum = 0.0;
+    const int cur_vals = matrixValues[i];
+    const int cur_nnz = A.nonzerosInRow[i];
+    for (int j=0; j< cur_nnz; j++){
+      DecodeNextIndex_Forward(A, indexId, uCount, curCol);
+      sum += ((cur_vals&(1<<j))?26:-1) * xv[curCol];
     }
-    return 0;
+    yv[i] = sum;
   }
+  return 0;
+}

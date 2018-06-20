@@ -19,35 +19,61 @@
  */
 
 #include "OptimizeProblem.hpp"
-#include <iostream>
+#include <cassert>
+#include <cmath>
+#include "CompressionData.hpp"
+#include "EncodeIndices.hpp"
 
-double optimization_allocation = 0.0;
-
+double optimizationAllocation = 0.0;
 
 /*!
-  helper function to create ZFP arrays for vectors
+  helper function to create compressionData
 
-  @param[inout] vect   The vector to create a zfp array for
+  @param[inout] mat   The matrix to optimize
 
-  @return returns the number of bytes used for the array
+  @return the number of bytes used
 */
-int CreateZFPArray(SparseMatrix & mat){
+int CreateCompressedArray(SparseMatrix & mat){
+  CompressionData * data = new CompressionData();
+  mat.optimizationData = data;
+
   assert(sizeof(int) == 4);
-  int * compressed = new int[mat.localNumberOfRows];
+  int * compressedValues = new int[mat.localNumberOfRows];
+  data->values = compressedValues;
 
   for (int i = 0; i < mat.localNumberOfRows; i++) {
-    compressed[i] = 0;
+    compressedValues[i] = 0;
     for (int j = 0; j < mat.nonzerosInRow[i]; j++){
       if(mat.matrixValues[i][j] == 26){
-        compressed[i] |= 1<<j;
+        compressedValues[i] |= 1<<j;
       } else {
         assert(mat.matrixValues[i][j] == -1);
       }
     }
   }
-  mat.optimizationData = compressed;
-  return 4*mat.localNumberOfRows;
+
+
+  local_int_t neededCompression = ceil(mat.localNumberOfNonzeros/8.0);
+
+
+  data->forwardCompressed = new unsigned char[neededCompression];
+  assert(data->forwardCompressed);
+  data->forwardUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->forwardUncompressed);
+  data->backwardCompressed = new unsigned char[neededCompression];
+  assert(data->backwardCompressed);
+  data->backwardUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->backwardUncompressed);
+
+  EncodeIndices(mat, true);
+  EncodeIndices(mat, false);
+
+  return sizeof(*data)  //structure itself
+          + 2*sizeof(unsigned char)*neededCompression //compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros; // uncompressed arrays
+          + 4*mat.localNumberOfRows; //matrix values
 }
+
 
 /*!
   Optimizes the data structures used for CG iteration to increase the
@@ -125,15 +151,14 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
-  double bytes_used = 0;
+  double optimizationAllocation = 0;
 
   SparseMatrix * Anext = &A;
 
   while (Anext) {
-    CreateZFPArray(*Anext);
+    optimizationAllocation += CreateCompressedArray(*Anext);
     Anext = Anext->Ac;
   }
-  optimization_allocation = bytes_used;
 
   return 0;
 }
@@ -141,6 +166,6 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return optimization_allocation;
+  return optimizationAllocation;
 
 }

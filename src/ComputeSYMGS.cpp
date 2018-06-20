@@ -23,6 +23,9 @@
 #include "ExchangeHalo.hpp"
 #endif
 #include <cassert>
+#include "DecodeNextIndex.hpp"
+
+#include <iostream>
 
 /*!
   Routine to one step of symmetrix Gauss-Seidel:
@@ -51,52 +54,51 @@
   @see ComputeSYMGS_ref
 */
 int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
+  assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
 
-    assert(x.localLength==A.localNumberOfColumns); // Make sure x contain space for halo values
+#ifndef HPCG_NO_MPI
+  ExchangeHalo(A,x);
+#endif
+  const local_int_t nrow = A.localNumberOfRows;
+  int * matrixValues = ((CompressionData*)A.optimizationData)->values;
+  const double * const rv = r.values;
+  double * const xv = x.values;
 
-  #ifndef HPCG_NO_MPI
-    ExchangeHalo(A,x);
-  #endif
+  local_int_t indexId = 0;
+  local_int_t uCount = 0;
+  local_int_t curCol = -20;
 
-    const local_int_t nrow = A.localNumberOfRows;
-    const int * matrixValues = (int*)A.optimizationData;
-    const double * const rv = r.values;
-    double * const xv = x.values;
-
-    for (local_int_t i=0; i< nrow; i++) {
-      const int currentValues = matrixValues[i];
-      const local_int_t * const currentColIndices = A.mtxIndL[i];
-      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-      const double  currentDiagonal = 26;
-      double sum = rv[i]; // RHS value
-
-      for (int j=0; j< currentNumberOfNonzeros; j++) {
-        local_int_t curCol = currentColIndices[j];
-        sum -= (((currentValues>>j)&1)*27.0-1.0) * xv[curCol];
-      }
-      sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
-
-      xv[i] = sum/currentDiagonal;
-
+  for (local_int_t i=0; i < nrow; i++) {
+    const int currentValues = matrixValues[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+    const double  currentDiagonal = 26;
+    double sum = rv[i]; // RHS value
+    for (int j=0; j< currentNumberOfNonzeros; j++) {
+      DecodeNextIndex_Forward(A, indexId, uCount, curCol);
+      sum -= ((currentValues&(1<<j))?26:-1) * xv[curCol];
     }
-
-    // Now the back sweep.
-
-    for (local_int_t i=nrow-1; i>=0; i--) {
-      const int currentValues = matrixValues[i];
-      const local_int_t * const currentColIndices = A.mtxIndL[i];
-      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-      const double  currentDiagonal = 26;
-      double sum = rv[i]; // RHS value
-
-      for (int j = 0; j< currentNumberOfNonzeros; j++) {
-        local_int_t curCol = currentColIndices[j];
-        sum -= (((currentValues>>j)&1)*27.0-1.0) * xv[curCol];
-      }
-      sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
-
-      xv[i] = sum/currentDiagonal;
-    }
-
-    return 0;
+    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+    xv[i] = sum/currentDiagonal;
   }
+
+  // Now the back sweep.
+
+  indexId = 0;
+  uCount = 0;
+  curCol = -20;
+
+  for (local_int_t i=nrow; i-- > 0;) {
+    const int currentValues = matrixValues[i];
+    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+    const double  currentDiagonal = 26;
+    double sum = rv[i]; // RHS value
+    for (int j = currentNumberOfNonzeros; j-- > 0;) {
+      DecodeNextIndex_Backward(A, indexId, uCount, curCol);
+      sum -= ((currentValues&(1<<j))?26:-1) * xv[curCol];
+    }
+    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+    xv[i] = sum/currentDiagonal;
+  }
+
+  return 0;
+}
