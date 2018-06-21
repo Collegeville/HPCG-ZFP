@@ -29,6 +29,7 @@
 #include "Geometry.hpp"
 #include "Vector.hpp"
 #include "MGData.hpp"
+#include "CompressionData.hpp"
 
 struct SparseMatrix_STRUCT {
   char  * title; //!< name of the sparse matrix

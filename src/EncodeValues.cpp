@@ -47,20 +47,20 @@ inline void compressValue(local_int_t & index, const double value, double & neig
   double compressedValue;
   if (neighborErr <= overNeighborErr) {
     if (withinTolerance(value, neighborErr)) {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * COMPRESSED_BITS);
+      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
       compressedValue = neighbor;
     } else {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * COMPRESSED_BITS);
+      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
       uncompressedArray[uncompressedCount] = value;
       uncompressedCount++;
       compressedValue = value;
     }
   } else {
     if (withinTolerance(value, overNeighborErr)) {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= OVER_NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * COMPRESSED_BITS);
+      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= OVER_NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
       compressedValue = overNeighbor;
     } else {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * COMPRESSED_BITS);
+      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
       uncompressedArray[uncompressedCount] = value;
       uncompressedCount++;
       compressedValue = value;

@@ -34,7 +34,7 @@ inline void DecodeNextValue(const SparseMatrix & mat, local_int_t & id, local_in
     compressed = ((CompressionData*)mat.optimizationData)->bValsCompressed;
   }
 
-  switch ((compressed[id/VALUES_PER_COMPRESSED_BYTE] >> ((id%VALUES_PER_COMPRESSED_BYTE) * COMPRESSED_BITS)) & COMPRESSED_VALUE_MASK) {
+  switch ((compressed[id/VALUES_PER_COMPRESSED_BYTE] >> ((id%VALUES_PER_COMPRESSED_BYTE) * VAL_COMPRESSED_BITS)) & COMPRESSED_VALUE_MASK) {
     case NEIGHBOR:
       previous = value;
       break;
@@ -56,7 +56,6 @@ inline void DecodeNextValue(const SparseMatrix & mat, local_int_t & id, local_in
       uncompressedCount++;
       break;
   }
-  id++;
 }
 
 #endif // DECODENEXTVALUE_HPP

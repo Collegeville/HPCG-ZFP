@@ -44,7 +44,8 @@ HPCG_DEPS = src/CG.o \
 	    src/GenerateCoarseProblem.o \
 	    src/init.o \
 	    src/finalize.o \
-	    src/EncodeValues.o
+	    src/EncodeValues.o \
+			src/EncodeIndices.o
 
 # These header files are included in many source files, so we recompile every file if one or more of these header is modified.
 PRIMARY_HEADERS = ../src/Geometry.hpp ../src/SparseMatrix.hpp ../src/Vector.hpp ../src/CGData.hpp \
@@ -178,4 +179,7 @@ src/CheckAspectRatio.o: ../src/CheckAspectRatio.cpp ../src/CheckAspectRatio.hpp 
 	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
 
 src/EncodeValues.o: ../src/EncodeValues.cpp ../src/EncodeValues.hpp $(PRIMARY_HEADERS)
+	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
+
+src/EncodeIndices.o: ../src/EncodeIndices.cpp ../src/EncodeIndices.hpp $(PRIMARY_HEADERS)
 	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@

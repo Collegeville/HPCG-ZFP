@@ -20,10 +20,14 @@
 
 #include "OptimizeProblem.hpp"
 
+#ifndef HPCG_NO_MPI
+#include <mpi.h>
+#endif
 #include <cassert>
 #include <cmath>
 #include "CompressionData.hpp"
 #include "EncodeValues.hpp"
+#include "EncodeIndices.hpp"
 
 double optimizationAllocation = 0.0;
 
@@ -36,17 +40,28 @@ double optimizationAllocation = 0.0;
   @return the number of bytes used
 */
 int CreateCompressedArray(SparseMatrix & mat){
-
-  local_int_t neededCompression = ceil(mat.localNumberOfNonzeros/(double)VALUES_PER_COMPRESSED_BYTE);
+  local_int_t indsNeededCompression = ceil(mat.localNumberOfNonzeros/(double)8);
+  local_int_t valsNeededCompression = ceil(mat.localNumberOfNonzeros/(double)VALUES_PER_COMPRESSED_BYTE);
 
   CompressionData * data = new CompressionData();
   mat.optimizationData = data;
 
-  data->fValsCompressed = new unsigned char[neededCompression];
+  data->fIndsCompressed = new uint8_t[indsNeededCompression];
+  assert(data->fIndsCompressed);
+  data->fIndsUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->fIndsUncompressed);
+
+  data->bIndsCompressed = new uint8_t[indsNeededCompression];
+  assert(data->bIndsCompressed);
+  data->bIndsUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->bIndsUncompressed);
+
+  data->fValsCompressed = new uint8_t[valsNeededCompression];
   assert(data->fValsCompressed);
   data->fValsUncompressed = new double[mat.localNumberOfNonzeros];
   assert(data->fValsUncompressed);
-  data->bValsCompressed = new unsigned char[neededCompression];
+
+  data->bValsCompressed = new uint8_t[valsNeededCompression];
   assert(data->bValsCompressed);
   data->bValsUncompressed = new double[mat.localNumberOfNonzeros];
   assert(data->bValsUncompressed);
@@ -56,6 +71,9 @@ int CreateCompressedArray(SparseMatrix & mat){
   data->diagonalValues = (double*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
   assert(data->diagonalValues);
 
+
+  EncodeIndices(mat, true);
+  EncodeIndices(mat, false);
   EncodeValues(mat, true);
   EncodeValues(mat, false);
 
@@ -65,10 +83,11 @@ int CreateCompressedArray(SparseMatrix & mat){
     data->diagonalValues[i] = mat.matrixDiagonal[i][0];
   }
 
-
-  return sizeof(*data)  //structure itself
-          + 2*sizeof(unsigned char)*neededCompression //compressed arrays
-          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros // uncompressed arrays
+  return sizeof(*data)
+          + 2*sizeof(uint8_t)*indsNeededCompression //index compressed arrays
+          + 2*sizeof(uint8_t)*valsNeededCompression //value compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros //index uncompressed arrays
+          + 2*sizeof(double)*mat.localNumberOfNonzeros //value uncompressed arrays
           + sizeof(double)*mat.localNumberOfRows; //diagonal
 }
 
@@ -149,13 +168,21 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
-  optimizationAllocation = 0;
+  double bytes = 0;
 
   SparseMatrix * Anext = &A;
   while (Anext) {
-    optimizationAllocation += CreateCompressedArray(*Anext);
+    bytes += CreateCompressedArray(*Anext);
     Anext = Anext->Ac;
   }
+
+  #ifndef HPCG_NO_MPI
+    // Use MPI's reduce function to collect all partial sums
+    MPI_Allreduce(&bytes, &optimizationAllocation, 1, MPI_DOUBLE, MPI_SUM,
+        MPI_COMM_WORLD);
+  #else
+    optimizationAllocation = bytes;
+  #endif
 
   return 0;
 }

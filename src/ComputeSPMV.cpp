@@ -28,6 +28,7 @@
 #include <omp.h>
 #endif
 #include <cassert>
+#include "DecodeNextIndex.hpp"
 #include "DecodeNextValue.hpp"
 
 
@@ -59,23 +60,24 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   double * const yv = y.values;
   const local_int_t nrow = A.localNumberOfRows;
 
-  local_int_t indexId = 0;
-  local_int_t uCount = 0;
+  local_int_t index = 0;
+  local_int_t valsUCount = 0;
+  local_int_t indsUCount = 0;
   double curVal = INITIAL_NEIGHBOR;
   double prevVal = INITIAL_OVER_NEIGHBOR;
+  local_int_t curCol = INITIAL_NEIGHBOR;
 
 //#ifndef HPCG_NO_OPENMP
 //  #pragma omp parallel for
 //#endif
   for (local_int_t i=0; i< nrow; i++)  {
     double sum = 0.0;
-    const local_int_t * const cur_inds = A.mtxIndL[i];
     const int cur_nnz = A.nonzerosInRow[i];
-
     for (int j=0; j< cur_nnz; j++){
-      local_int_t cur_col = cur_inds[j];
-      DecodeNextValue(A, indexId, uCount, curVal, prevVal, true);
-      sum += curVal*xv[cur_col];
+      DecodeNextIndex(A, index, indsUCount, curCol, true);
+      DecodeNextValue(A, index, valsUCount, curVal, prevVal, true);
+      index++;
+      sum += curVal*xv[curCol];
     }
     yv[i] = sum;
   }

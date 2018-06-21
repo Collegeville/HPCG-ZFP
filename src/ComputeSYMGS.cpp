@@ -23,6 +23,7 @@
 #include "ExchangeHalo.hpp"
 #endif
 #include <cassert>
+#include "DecodeNextIndex.hpp"
 #include "DecodeNextValue.hpp"
 
 /*!
@@ -64,20 +65,22 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   const double * const rv = r.values;
   double * const xv = x.values;
 
-  local_int_t indexId = 0;
-  local_int_t uCount = 0;
+  local_int_t index = 0;
+  local_int_t valsUCount = 0;
+  local_int_t indsUCount = 0;
   double curVal = INITIAL_NEIGHBOR;
   double prevVal = INITIAL_OVER_NEIGHBOR;
+  local_int_t curCol = INITIAL_NEIGHBOR;
 
   for (local_int_t i = 0; i < nrow; i++) {
-    const local_int_t * const currentColIndices = A.mtxIndL[i];
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const double currentDiagonal = matrixDiagonal[i]; // Current diagonal value
+    const double  currentDiagonal = matrixDiagonal[i]; // Current diagonal value
     double sum = rv[i]; // RHS value
 
-    for (int j = 0; j < currentNumberOfNonzeros; j++) {
-      local_int_t curCol = currentColIndices[j];
-      DecodeNextValue(A, indexId, uCount, curVal, prevVal, true);
+    for (int j=0; j< currentNumberOfNonzeros; j++) {
+      DecodeNextIndex(A, index, indsUCount, curCol, true);
+      DecodeNextValue(A, index, valsUCount, curVal, prevVal, true);
+      index++;
       sum -= curVal*xv[curCol];
     }
     sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
@@ -88,20 +91,21 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
   // Now the back sweep.
 
-  indexId = 0;
-  uCount = 0;
+  index = 0;
+  valsUCount = 0;
+  indsUCount = 0;
   curVal = INITIAL_NEIGHBOR;
   prevVal = INITIAL_OVER_NEIGHBOR;
-
+  curCol = INITIAL_NEIGHBOR;
   for (local_int_t i = nrow-1; i >= 0; i--) {
-    const local_int_t * const currentColIndices = A.mtxIndL[i];
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
     const double currentDiagonal = matrixDiagonal[i]; // Current diagonal value
     double sum = rv[i]; // RHS value
 
     for (int j = 0; j < currentNumberOfNonzeros; j++) {
-      local_int_t curCol = currentColIndices[j];
-      DecodeNextValue(A, indexId, uCount, curVal, prevVal, false);
+      DecodeNextIndex(A, index, indsUCount, curCol, false);
+      DecodeNextValue(A, index, valsUCount, curVal, prevVal, false);
+      index++;
       sum -= curVal*xv[curCol];
     }
     sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
