@@ -19,6 +19,60 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+#include <cassert>
+#include <cmath>
+#include "CompressionData.hpp"
+#include "EncodeValues.hpp"
+
+double optimizationAllocation = 0.0;
+
+
+/*!
+  helper function to create compressionData
+
+  @param[inout] mat   The matrix to optimize
+
+  @return the number of bytes used
+*/
+int CreateCompressedArray(SparseMatrix & mat){
+
+  local_int_t neededCompression = ceil(mat.localNumberOfNonzeros/(double)VALUES_PER_COMPRESSED_BYTE);
+
+  CompressionData * data = new CompressionData();
+  mat.optimizationData = data;
+
+  data->fValsCompressed = new unsigned char[neededCompression];
+  assert(data->fValsCompressed);
+  data->fValsUncompressed = new double[mat.localNumberOfNonzeros];
+  assert(data->fValsUncompressed);
+  data->bValsCompressed = new unsigned char[neededCompression];
+  assert(data->bValsCompressed);
+  data->bValsUncompressed = new double[mat.localNumberOfNonzeros];
+  assert(data->bValsUncompressed);
+
+  //reuse matrix diagonal allocation
+  assert(sizeof(double**) >= sizeof(double)); //ensure the matrixDiagonal array is larger than our new copy.
+  data->diagonalValues = (double*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
+  assert(data->diagonalValues);
+
+  EncodeValues(mat, true);
+  EncodeValues(mat, false);
+
+  //copy diagonal into array to get 8 vals per cache line instead of 1 val per cache line of mat.matrixDiagonal
+  //The values are compressed serially, so a pointer/index of an entry doesn't work.
+  for (local_int_t i = 0; i < mat.localNumberOfRows; i++){
+    data->diagonalValues[i] = mat.matrixDiagonal[i][0];
+  }
+
+
+  return sizeof(*data)  //structure itself
+          + 2*sizeof(unsigned char)*neededCompression //compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros // uncompressed arrays
+          + sizeof(double)*mat.localNumberOfRows; //diagonal
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +149,20 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  optimizationAllocation = 0;
+
+  SparseMatrix * Anext = &A;
+  while (Anext) {
+    optimizationAllocation += CreateCompressedArray(*Anext);
+    Anext = Anext->Ac;
+  }
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimizationAllocation;
 
 }
