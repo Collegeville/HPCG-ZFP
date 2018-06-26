@@ -29,6 +29,7 @@
 #endif
 #include <cassert>
 #include "DecodeNextIndex.hpp"
+#include "DecodeNextValue.hpp"
 
 /*!
   Routine to compute sparse matrix vector product y = Ax where:
@@ -57,14 +58,17 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   const double * const xv = x.values;
   double * const yv = y.values;
   const local_int_t nrow = A.localNumberOfRows;
-  uint8_t ** indices = (uint8_t**)A.optimizationData;
+  uint8_t ** indices = ((CompressionData*)A.optimizationData)->mtxIndsL;
+  local_int_t indexId = 0;
+  local_int_t uCount = 0;
+  double curVal = INITIAL_NEIGHBOR;
+  double prevVal = INITIAL_OVER_NEIGHBOR;
 
 //#ifndef HPCG_NO_OPENMP
 //  #pragma omp parallel for
 //#endif
   for (local_int_t i=0; i< nrow; i++)  {
     double sum = 0.0;
-    const double * const cur_vals = A.matrixValues[i];
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
     local_int_t curCol;
@@ -72,7 +76,8 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
 
     for (int j=0; j< cur_nnz; j++){
       DecodeNextIndex(cur_inds, bitPosition, curCol);
-      sum += cur_vals[j]*xv[curCol];
+      DecodeNextValue(A, indexId, uCount, curVal, prevVal, true);
+      sum += curVal*xv[curCol];
     }
     yv[i] = sum;
   }

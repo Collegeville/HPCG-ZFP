@@ -24,12 +24,8 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-
-
-#include <iostream>
-#include <mpi.h>
-#include <bitset>
-#include "DecodeNextIndex.hpp"
+#include "CompressionData.hpp"
+#include "EncodeValues.hpp"
 
 
 double optimizationAllocation = 0.0;
@@ -66,17 +62,20 @@ inline void putBits(uint8_t * buffer, uint32_t val, int bitPos) {
 */
 int CreateCompressedArray(SparseMatrix & mat){
 
-  //temp[j] = inds[j]-inds[j-1] for j > 0; temp[0] = temp[0]-1
-  //then compress with Elias delta coding
+  CompressionData * data = new CompressionData();
+  mat.optimizationData = data;
 
   assert(sizeof(local_int_t) == 4);
+
+  //temp[j] = inds[j]-inds[j-1] for j > 0; temp[0] = temp[0]-1
+  //then compress with Elias delta coding
 
   uint8_t temp[142]; //maximum needed space, will allocate the exact amount for each row
 
   uint8_t ** mtxIndsL = new uint8_t*[mat.localNumberOfRows];
-  mat.optimizationData = mtxIndsL;
+  data->mtxIndsL = mtxIndsL;
 
-  float totalMemory = 0;
+  double totalMemory = sizeof(*mtxIndsL)*mat.localNumberOfRows;
   for (local_int_t i = 0; i < mat.localNumberOfRows; i++) {
     int nonzerosInRow = mat.nonzerosInRow[i];
     local_int_t * inds = mat.mtxIndL[i];
@@ -131,14 +130,43 @@ int CreateCompressedArray(SparseMatrix & mat){
       position += N-1;
     }
 
-    int bytesUsed = ceil(position/8.0);
+    int bytesUsed = ceil(position/8.0);  CompressionData * data = new CompressionData();
     mtxIndsL[i] = new uint8_t[bytesUsed];
     std::copy(temp, temp+bytesUsed, mtxIndsL[i]);
-
     totalMemory += bytesUsed;
   }
 
-  return sizeof(*mtxIndsL)*mat.localNumberOfRows + totalMemory;
+  local_int_t neededCompression = ceil(mat.localNumberOfNonzeros/(double)VALUES_PER_COMPRESSED_BYTE);
+
+  data->fValsCompressed = new unsigned char[neededCompression];
+  assert(data->fValsCompressed);
+  data->fValsUncompressed = new double[mat.localNumberOfNonzeros];
+  assert(data->fValsUncompressed);
+  data->bValsCompressed = new unsigned char[neededCompression];
+  assert(data->bValsCompressed);
+  data->bValsUncompressed = new double[mat.localNumberOfNonzeros];
+  assert(data->bValsUncompressed);
+
+  //reuse matrix diagonal allocation
+  assert(sizeof(double**) >= sizeof(double)); //ensure the matrixDiagonal array is larger than our new copy.
+  data->diagonalValues = (double*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
+  assert(data->diagonalValues);
+
+  EncodeValues(mat, true);
+  EncodeValues(mat, false);
+
+  //copy diagonal into array to get 8 vals per cache line instead of 1 val per cache line of mat.matrixDiagonal
+  //The values are compressed serially, so a pointer/index of an entry doesn't work.
+  for (local_int_t i = 0; i < mat.localNumberOfRows; i++){
+    data->diagonalValues[i] = mat.matrixDiagonal[i][0];
+  }
+
+
+  return sizeof(*data)  //structure itself
+          + 2*sizeof(unsigned char)*neededCompression //compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros // uncompressed arrays
+          + sizeof(double)*mat.localNumberOfRows //diagonal
+          + totalMemory; // index compression
 }
 
 
