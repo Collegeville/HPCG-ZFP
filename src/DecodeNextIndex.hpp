@@ -57,7 +57,6 @@ inline int countZeros(uint32_t bits) {
   @return 0 on success, otherwise nonzero
 */
 inline void DecodeNextIndex(const uint8_t * buffer, int & bitPosition, local_int_t & previousIndex) {
-  bool rowStart = bitPosition == 0;
   uint32_t bits = getBits(buffer, bitPosition);
 
   //length of N
@@ -73,13 +72,8 @@ inline void DecodeNextIndex(const uint8_t * buffer, int & bitPosition, local_int
   bits |= 1 << (N-1); //implicit 1
   bitPosition += N-1;
 
-  if (rowStart) {
-    //the first value is stored as the value+1 (for when rows start with 0)
-    previousIndex = bits - 1;
-  } else {
-    //values are stored as difference from the previous index
-    previousIndex = bits + previousIndex;
-  }
+  //values are stored as difference from the previous index
+  previousIndex = bits + previousIndex;
 }
 
 

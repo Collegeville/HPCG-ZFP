@@ -74,7 +74,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   for (local_int_t i = 0; i < nrow; i++) {
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
-    local_int_t curCol;
+    local_int_t curCol = -1;
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
     const double currentDiagonal = matrixDiagonal[i]; // Current diagonal value
     double sum = rv[i]; // RHS value
@@ -100,7 +100,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   for (local_int_t i = nrow-1; i >= 0; i--) {
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
-    local_int_t curCol;
+    local_int_t curCol = -1;
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
     const double currentDiagonal = matrixDiagonal[i]; // Current diagonal value
     double sum = rv[i]; // RHS value

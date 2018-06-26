@@ -71,7 +71,7 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
     double sum = 0.0;
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
-    local_int_t curCol;
+    local_int_t curCol = -1;
     const int cur_nnz = A.nonzerosInRow[i];
 
     for (int j=0; j< cur_nnz; j++){
