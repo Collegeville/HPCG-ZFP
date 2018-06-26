@@ -43,12 +43,11 @@ HPCG_DEPS = src/CG.o \
 	    src/CheckAspectRatio.o \
 	    src/GenerateCoarseProblem.o \
 	    src/init.o \
-	    src/finalize.o 
-	    
+	    src/finalize.o
 
 # These header files are included in many source files, so we recompile every file if one or more of these header is modified.
 PRIMARY_HEADERS = ../src/Geometry.hpp ../src/SparseMatrix.hpp ../src/Vector.hpp ../src/CGData.hpp \
-                  ../src/MGData.hpp ../src/hpcg.hpp
+                  ../src/MGData.hpp ../src/hpcg.hpp ../src/DecodeNextIndex.hpp
 
 all: bin/xhpcg
 

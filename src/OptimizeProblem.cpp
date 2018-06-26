@@ -19,6 +19,115 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+
+double optimizationAllocation = 0.0;
+
+// computes floor(log_2(v))+1 where v is positive
+inline int numBits(local_int_t v) {
+  //copied from https://graphics.stanford.edu/~seander/bithacks.html
+  const unsigned int b[] = {0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000};
+  const unsigned int S[] = {1, 2, 4, 8, 16};
+
+  register unsigned int r = 0; // result of log2(v) will go here
+  for (int i = 4; i >= 0; i--) {
+    if (v & b[i]) {
+      v >>= S[i];
+      r |= S[i];
+    }
+  }
+  //post loop r == floor(log2(v))
+  return r+1;
+}
+
+//write bits to the given buffer
+inline void putBits(uint8_t * buffer, uint32_t val, int bitPos) {
+  // based off https://stackoverflow.com/a/5723250/6353993
+  *(uint64_t*)(buffer + bitPos/8) |= val << (bitPos%8);
+}
+
+/*!
+  helper function to create compressionData
+
+  @param[inout] mat   The matrix to optimize
+
+  @return the number of bytes used
+*/
+int CreateCompressedArray(SparseMatrix & mat){
+
+
+  assert(sizeof(local_int_t) == 4);
+
+  //temp[j] = inds[j]-inds[j-1] for j > 0; temp[0] = temp[0]-1
+  //then compress with Elias delta coding
+
+  uint8_t temp[213]; //maximum needed space, will allocate the exact amount for each row
+
+  uint8_t ** mtxIndsL = new uint8_t*[mat.localNumberOfRows];
+  mat.optimizationData = mtxIndsL;
+
+  double totalMemory = sizeof(*mtxIndsL)*mat.localNumberOfRows;
+  for (local_int_t i = 0; i < mat.localNumberOfRows; i++) {
+    int nonzerosInRow = mat.nonzerosInRow[i];
+    local_int_t * inds = mat.mtxIndL[i];
+    double * vals = mat.matrixValues[i];
+    double *& diagPtr = mat.matrixDiagonal[i];
+
+    // need row indices in ascending order
+    if (!std::is_sorted(inds, inds+nonzerosInRow)) {
+      for (int j = 0; j<nonzerosInRow-1; j++) {
+        local_int_t * nextElement = std::min_element(inds+j, inds+nonzerosInRow);
+        int index = nextElement - inds;
+        std::swap(vals[j], vals[index]);
+        std::swap(inds[j], inds[index]);
+        if (vals+index == diagPtr) {
+          diagPtr = vals+j;
+        } else if (vals+j == diagPtr) {
+          diagPtr = vals+index;
+        }
+      }
+    }
+
+
+    std::fill_n(temp, 142, 0 );
+    int position = 0;
+    //number of bits for inds[0]
+    int N = numBits(inds[0]+1);
+    assert(N <= 29); // otherwise we can't always decode with a single read from the buffer
+    position += N-1;
+    //put last N-1 bits of delta plus seperator bit
+    unsigned int explicitBitsMask = (1 << (N-1))-1;
+    putBits(temp, (((inds[0]+1)&explicitBitsMask) << 1) | 1, position);
+    position += N;
+
+    for (int j = 1; j < nonzerosInRow; j++) {
+      local_int_t delta = inds[j]-inds[j-1];
+
+      N = numBits(delta);
+      assert(N <= 29); // otherwise we can't always decode with a single read from the buffer
+      //gamma code N
+      position += N-1;
+      //put last N-1 bits of delta
+      explicitBitsMask = (1 << (N-1))-1;
+      putBits(temp, ((delta&explicitBitsMask) << 1) | 1, position);
+      position += N;
+    }
+
+    int bytesUsed = ceil(position/8.0);
+    mtxIndsL[i] = new uint8_t[bytesUsed];
+    std::copy(temp, temp+bytesUsed, mtxIndsL[i]);
+    totalMemory += bytesUsed;
+  }
+
+
+  return totalMemory; // index compression
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +204,20 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  optimizationAllocation = 0;
+
+  SparseMatrix * Anext = &A;
+  while (Anext) {
+    optimizationAllocation += CreateCompressedArray(*Anext);
+    Anext = Anext->Ac;
+  }
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimizationAllocation;
 
 }

@@ -24,6 +24,7 @@
 #include <map>
 #include <vector>
 #include <cassert>
+#include <cstdint>
 #include "Geometry.hpp"
 #include "Vector.hpp"
 #include "MGData.hpp"
@@ -166,6 +167,16 @@ inline void DeleteMatrix(SparseMatrix & A) {
   if (A.geom!=0) { delete A.geom; A.geom = 0;}
   if (A.Ac!=0) { DeleteMatrix(*A.Ac); delete A.Ac; A.Ac = 0;} // Delete coarse matrix
   if (A.mgData!=0) { DeleteMGData(*A.mgData); delete A.mgData; A.mgData = 0;} // Delete MG data
+
+  if (A.optimizationData) {
+    uint8_t ** mtxIndsL = (uint8_t**)A.optimizationData;
+    for (int i = 0; i<A.localNumberOfRows; i++) {
+      delete [] mtxIndsL[i];
+    }
+    delete [] mtxIndsL;
+    A.optimizationData = 0;
+  }
+
   return;
 }
 
