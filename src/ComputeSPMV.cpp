@@ -57,14 +57,15 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   const double * const xv = x.values;
   double * const yv = y.values;
   const local_int_t nrow = A.localNumberOfRows;
-  uint8_t ** indices = (uint8_t**)A.optimizationData;
+  uint8_t ** indices = ((CompressionData*)A.optimizationData)->mtxIndL;
+  float ** matrixValues = ((CompressionData*)A.optimizationData)->matrixValues;
 
-//#ifndef HPCG_NO_OPENMP
-//  #pragma omp parallel for
-//#endif
+#ifndef HPCG_NO_OPENMP
+  #pragma omp parallel for
+#endif
   for (local_int_t i=0; i< nrow; i++)  {
     double sum = 0.0;
-    const double * const cur_vals = A.matrixValues[i];
+    const float * cur_vals = matrixValues[i];
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
     local_int_t curCol;

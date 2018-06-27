@@ -19,17 +19,10 @@
  */
 
 #include "OptimizeProblem.hpp"
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-
-
-#include <iostream>
-#include <mpi.h>
-#include <bitset>
-#include "DecodeNextIndex.hpp"
 
 
 double optimizationAllocation = 0.0;
@@ -66,17 +59,16 @@ inline void putBits(uint8_t * buffer, uint32_t val, int bitPos) {
 */
 int CreateCompressedArray(SparseMatrix & mat){
 
-  //temp[j] = inds[j]-inds[j-1] for j > 0; temp[0] = temp[0]-1
+  //temp[0] = inds[0]-1; temp[j] = inds[j]-inds[j-1] for j > 0
   //then compress with Elias delta coding
 
   assert(sizeof(local_int_t) == 4);
 
   uint8_t temp[142]; //maximum needed space, will allocate the exact amount for each row
 
-  uint8_t ** mtxIndsL = new uint8_t*[mat.localNumberOfRows];
-  mat.optimizationData = mtxIndsL;
+  uint8_t ** mtxIndL = new uint8_t*[mat.localNumberOfRows];
 
-  float totalMemory = 0;
+  double totalMemory = sizeof(*mtxIndL)*mat.localNumberOfRows;
   for (local_int_t i = 0; i < mat.localNumberOfRows; i++) {
     int nonzerosInRow = mat.nonzerosInRow[i];
     local_int_t * inds = mat.mtxIndL[i];
@@ -132,15 +124,35 @@ int CreateCompressedArray(SparseMatrix & mat){
     }
 
     int bytesUsed = ceil(position/8.0);
-    mtxIndsL[i] = new uint8_t[bytesUsed];
-    std::copy(temp, temp+bytesUsed, mtxIndsL[i]);
+    mtxIndL[i] = new uint8_t[bytesUsed];
+    std::copy(temp, temp+bytesUsed, mtxIndL[i]);
 
     totalMemory += bytesUsed;
   }
 
-  return sizeof(*mtxIndsL)*mat.localNumberOfRows + totalMemory;
-}
+  float ** values = new float*[mat.localNumberOfRows];
+  float ** diag = new float*[mat.localNumberOfRows];
 
+  local_int_t elts = 0;
+  for (int i = 0; i < mat.localNumberOfRows; i++) {
+    values[i] = new float[mat.nonzerosInRow[i]];
+    for (int j = 0; j < mat.nonzerosInRow[i]; j++){
+      values[i][j] = (float)mat.matrixValues[i][j];
+    }
+    diag[i] = values[i] + (mat.matrixDiagonal[i]-mat.matrixValues[i]);
+    totalMemory += sizeof(float)*mat.nonzerosInRow[i];
+  }
+  CompressionData * data = new CompressionData();
+  data->matrixValues = values;
+  data->matrixDiagonal = diag;
+  data->numRows = mat.localNumberOfRows;
+  data->mtxIndL = mtxIndL;
+
+  mat.optimizationData = data;
+  return sizeof(data)
+        + mat.localNumberOfRows*sizeof(*values)*2 //arrays of pointers
+        + totalMemory;
+}
 
 /*!
   Optimizes the data structures used for CG iteration to increase the
@@ -210,7 +222,7 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     old0 = counters[i];
     counters[i] = counters[i-1] + old;
     old = old0;
-  }
+  }optimization_allocation
   counters[0] = 0;
 
   // translate `colors' into a permutation
