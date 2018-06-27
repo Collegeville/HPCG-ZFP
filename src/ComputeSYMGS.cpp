@@ -24,6 +24,7 @@
 #endif
 #include <cassert>
 #include "DecodeNextIndex.hpp"
+#include "DecodeNextValue.hpp"
 
 /*!
   Routine to one step of symmetrix Gauss-Seidel:
@@ -60,24 +61,29 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 #endif
 
   const local_int_t nrow = A.localNumberOfRows;
-  double ** matrixDiagonal = A.matrixDiagonal;  // An array of pointers to the diagonal entries A.matrixValues
+  double * matrixDiagonal = ((CompressionData*)A.optimizationData)->diagonalValues;
   const double * const rv = r.values;
   double * const xv = x.values;
 
-  uint8_t ** indices = (uint8_t**)A.optimizationData;
+  uint8_t ** indices = ((CompressionData*)A.optimizationData)->mtxIndL;
 
-  for (local_int_t i=0; i< nrow; i++) {
-    const double * const currentValues = A.matrixValues[i];
+  local_int_t indexId = 0;
+  local_int_t uCount = 0;
+  double curVal = INITIAL_NEIGHBOR;
+  double prevVal = INITIAL_OVER_NEIGHBOR;
+
+  for (local_int_t i = 0; i < nrow; i++) {
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
     local_int_t curCol = -1;
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const double  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
+    const double currentDiagonal = matrixDiagonal[i]; // Current diagonal value
     double sum = rv[i]; // RHS value
 
-    for (int j=0; j< currentNumberOfNonzeros; j++) {
+    for (int j = 0; j < currentNumberOfNonzeros; j++) {
       DecodeNextIndex(cur_inds, bitPosition, curCol);
-      sum -= currentValues[j] * xv[curCol];
+      DecodeNextValue(A, indexId, uCount, curVal, prevVal, true);
+      sum -= curVal*xv[curCol];
     }
     sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
@@ -87,18 +93,23 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
   // Now the back sweep.
 
+  indexId = 0;
+  uCount = 0;
+  curVal = INITIAL_NEIGHBOR;
+  prevVal = INITIAL_OVER_NEIGHBOR;
+
   for (local_int_t i=nrow-1; i>=0; i--) {
-    const double * const currentValues = A.matrixValues[i];
     const uint8_t * const cur_inds = indices[i];
     int bitPosition = 0;
     local_int_t curCol = -1;
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const double  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
+    const double currentDiagonal = matrixDiagonal[i]; // Current diagonal value
     double sum = rv[i]; // RHS value
 
-    for (int j = 0; j< currentNumberOfNonzeros; j++) {
+    for (int j = 0; j < currentNumberOfNonzeros; j++) {
       DecodeNextIndex(cur_inds, bitPosition, curCol);
-      sum -= currentValues[j]*xv[curCol];
+      DecodeNextValue(A, indexId, uCount, curVal, prevVal, false);
+      sum -= curVal*xv[curCol];
     }
     sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 

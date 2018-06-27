@@ -24,6 +24,9 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include "CompressionData.hpp"
+#include "EncodeValues.hpp"
+
 
 double optimizationAllocation = 0.0;
 
@@ -59,6 +62,9 @@ inline void putBits(uint8_t * buffer, uint32_t val, int bitPos) {
 */
 int CreateCompressedArray(SparseMatrix & mat){
 
+  CompressionData * data = new CompressionData();
+  data->localNumberOfRows = mat.localNumberOfRows;
+  mat.optimizationData = data;
 
   assert(sizeof(local_int_t) == 4);
 
@@ -67,10 +73,10 @@ int CreateCompressedArray(SparseMatrix & mat){
 
   uint8_t temp[213]; //maximum needed space, will allocate the exact amount for each row
 
-  uint8_t ** mtxIndsL = new uint8_t*[mat.localNumberOfRows];
-  mat.optimizationData = mtxIndsL;
+  uint8_t ** mtxIndL = new uint8_t*[mat.localNumberOfRows];
+  data->mtxIndL = mtxIndL;
 
-  double totalMemory = sizeof(*mtxIndsL)*mat.localNumberOfRows;
+  double totalMemory = sizeof(*mtxIndL)*mat.localNumberOfRows;
   for (local_int_t i = 0; i < mat.localNumberOfRows; i++) {
     int nonzerosInRow = mat.nonzerosInRow[i];
     local_int_t * inds = mat.mtxIndL[i];
@@ -118,22 +124,51 @@ int CreateCompressedArray(SparseMatrix & mat){
     }
 
     int bytesUsed = ceil(position/8.0);
-    mtxIndsL[i] = new uint8_t[bytesUsed];
-    std::copy(temp, temp+bytesUsed, mtxIndsL[i]);
+    mtxIndL[i] = new uint8_t[bytesUsed];
+    std::copy(temp, temp+bytesUsed, mtxIndL[i]);
     totalMemory += bytesUsed;
   }
 
+  local_int_t neededCompression = ceil(mat.localNumberOfNonzeros/(double)VALUES_PER_COMPRESSED_BYTE);
 
-  return totalMemory; // index compression
+  data->fValsCompressed = new unsigned char[neededCompression];
+  assert(data->fValsCompressed);
+  data->fValsUncompressed = new double[mat.localNumberOfNonzeros];
+  assert(data->fValsUncompressed);
+  data->bValsCompressed = new unsigned char[neededCompression];
+  assert(data->bValsCompressed);
+  data->bValsUncompressed = new double[mat.localNumberOfNonzeros];
+  assert(data->bValsUncompressed);
+
+  //reuse matrix diagonal allocation
+  assert(sizeof(double**) >= sizeof(double)); //ensure the matrixDiagonal array is larger than our new copy.
+  data->diagonalValues = (double*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
+  assert(data->diagonalValues);
+
+  EncodeValues(mat, true);
+  EncodeValues(mat, false);
+
+  //copy diagonal into array to get 8 vals per cache line instead of 1 val per cache line of mat.matrixDiagonal
+  //The values are compressed serially, so a pointer/index of an entry doesn't work.
+  for (local_int_t i = 0; i < mat.localNumberOfRows; i++){
+    data->diagonalValues[i] = mat.matrixDiagonal[i][0];
+  }
+
+
+  return sizeof(*data)  //structure itself
+          + 2*sizeof(unsigned char)*neededCompression //compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros // uncompressed arrays
+          + sizeof(double)*mat.localNumberOfRows //diagonal
+          + totalMemory; // index compression
 }
-
 
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
 
   @param[inout] A      The known system matrix, also contains the MG hierarchy in attributes Ac and mgData.
-  @param[inout] data   The data structure with all necessary CG vectors preallocated
+  @param[inout] data   The data structure with all neces#include "CompressionData.hpp"
+#include "EncodeValues.hpp"sary CG vectors preallocated
   @param[inout] b      The known right hand side vector
   @param[inout] x      The solution vector to be computed in future CG iteration
   @param[inout] xexact The exact solution vector
@@ -147,7 +182,8 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
 
   // This function can be used to completely transform any part of the data structures.
   // Right now it does nothing, so compiling with a check for unused variables results in complaints
-
+#include "CompressionData.hpp"
+#include "EncodeValues.hpp"
 #if defined(HPCG_USE_MULTICOLORING)
   const local_int_t nrow = A.localNumberOfRows;
   std::vector<local_int_t> colors(nrow, nrow); // value `nrow' means `uninitialized'; initialized colors go from 0 to nrow-1

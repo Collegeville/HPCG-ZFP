@@ -21,7 +21,7 @@
 //only the bottom 57 bits are garenteed to be accurate
 inline uint64_t getBits(const uint8_t * buffer, int bitPos) {
   // based off https://stackoverflow.com/a/5723250/6353993
-  uint64_t bits = *(uint64_t*)(buffer+bitPos/8);
+  uint64_t bits = *(uint64_t*)(buffer + bitPos/8);
   return bits >> bitPos%8;
 }
 
@@ -53,14 +53,7 @@ inline int countZeros(uint32_t bits) {
 }
 
 /*!
-  Decompresses the next index of the matrix's
-
-  @param [in] mat                  The matrix being used
-  @param [in] id                   The index to fetch
-  @param [inout] uncompressedCount The number of previously uncompressed values, incremented as nessacery
-  @param [inout] value             The previous value decoded, replaced with the new value
-
-  @return 0 on success, otherwise nonzero
+  Decompresses the next index of the matrix's row
 */
 inline void DecodeNextIndex(const uint8_t * buffer, int & bitPosition, local_int_t & previousIndex) {
   uint64_t bits = getBits(buffer, bitPosition);
