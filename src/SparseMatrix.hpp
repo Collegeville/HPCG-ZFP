@@ -28,6 +28,7 @@
 #include "Geometry.hpp"
 #include "Vector.hpp"
 #include "MGData.hpp"
+#include "CompressionData.hpp"
 
 struct SparseMatrix_STRUCT {
   char  * title; //!< name of the sparse matrix
@@ -130,10 +131,14 @@ inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
   @param[in] diagonal  Vector of diagonal values that will replace existing matrix diagonal values.
  */
 inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
-    double ** curDiagA = A.matrixDiagonal;
-    double * dv = diagonal.values;
-    assert(A.localNumberOfRows==diagonal.localLength);
-    for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+  double ** curDiagA = A.matrixDiagonal;
+  double * dv = diagonal.values;
+  assert(A.localNumberOfRows==diagonal.localLength);
+  for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+  if (A.optimizationData) {
+    float ** optDiagA = ((CompressionData*)A.optimizationData)->matrixDiagonal;
+    for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(optDiagA[i]) = dv[i];
+  }
   return;
 }
 /*!
@@ -169,14 +174,10 @@ inline void DeleteMatrix(SparseMatrix & A) {
   if (A.mgData!=0) { DeleteMGData(*A.mgData); delete A.mgData; A.mgData = 0;} // Delete MG data
 
   if (A.optimizationData) {
-    uint8_t ** mtxIndsL = (uint8_t**)A.optimizationData;
-    for (int i = 0; i<A.localNumberOfRows; i++) {
-      delete [] mtxIndsL[i];
-    }
-    delete [] mtxIndsL;
+    DeleteCompressionData(*(CompressionData*)A.optimizationData);
+    delete (CompressionData*)A.optimizationData;
     A.optimizationData = 0;
   }
-
   return;
 }
 
