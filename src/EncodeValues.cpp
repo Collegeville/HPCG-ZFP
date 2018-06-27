@@ -39,8 +39,8 @@ inline bool withinTolerance(const double value, const double error) {
   }
 }
 
-inline void compressValue(local_int_t & index, const double value, double & neighbor,
-                        uint8_t * compressed, double * uncompressedArray, local_int_t & uncompressedCount) {
+inline void compressValue(local_int_t & index, const float value, float & neighbor,
+                        uint8_t * compressed, float * uncompressedArray, local_int_t & uncompressedCount) {
   double neighborErr = fabs(value-neighbor);
 
   if (withinTolerance(value, neighborErr)) {
@@ -64,7 +64,7 @@ inline void compressValue(local_int_t & index, const double value, double & neig
 */
 void EncodeValues(SparseMatrix & mat, const bool forward) {
   uint8_t * compressed;
-  double * uncompressedArray;
+  float * uncompressedArray;
   if (forward) {
     compressed = ((CompressionData*)mat.optimizationData)->fValsCompressed;
     uncompressedArray = ((CompressionData*)mat.optimizationData)->fValsUncompressed;
@@ -82,7 +82,7 @@ void EncodeValues(SparseMatrix & mat, const bool forward) {
   const char * nnzInRow = mat.nonzerosInRow;
 
   local_int_t index = 0;
-  double neighbor = INITIAL_NEIGHBOR;
+  float neighbor = INITIAL_NEIGHBOR;
   local_int_t uncompressedCount = 0;
 
   if (forward) {

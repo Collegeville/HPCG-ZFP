@@ -122,7 +122,7 @@ inline void CopyMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
     double * dv = diagonal.values;
     assert(A.localNumberOfRows==diagonal.localLength);
     if (A.optimizationData) {
-      double * curDiagA = ((CompressionData*)A.optimizationData)->diagonalValues;
+      float * curDiagA = ((CompressionData*)A.optimizationData)->diagonalValues;
       for (local_int_t i=0; i<A.localNumberOfRows; ++i) dv[i] = curDiagA[i];
     } else {
       double ** curDiagA = A.matrixDiagonal;
@@ -141,7 +141,7 @@ inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector & diagonal) {
     double * dv = diagonal.values;
     assert(A.localNumberOfRows==diagonal.localLength);
     if (A.optimizationData) {
-      double * curDiagA = ((CompressionData*)A.optimizationData)->diagonalValues;;
+      float * curDiagA = ((CompressionData*)A.optimizationData)->diagonalValues;;
       for (local_int_t i=0; i<A.localNumberOfRows; ++i) {
         curDiagA[i] = dv[i];
 

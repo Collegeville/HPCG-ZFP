@@ -59,12 +59,12 @@ struct CompressionData_STRUCT {
   local_int_t * bIndsUncompressed;
 
   uint8_t * fValsCompressed;
-  double * fValsUncompressed;
+  float * fValsUncompressed;
 
   uint8_t * bValsCompressed;
-  double * bValsUncompressed;
+  float * bValsUncompressed;
 
-  double * diagonalValues;
+  float * diagonalValues;
 };
 typedef CompressionData_STRUCT CompressionData;
 

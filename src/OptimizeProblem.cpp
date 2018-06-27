@@ -58,17 +58,17 @@ int CreateCompressedArray(SparseMatrix & mat){
 
   data->fValsCompressed = new uint8_t[valsNeededCompression];
   assert(data->fValsCompressed);
-  data->fValsUncompressed = new double[mat.localNumberOfNonzeros];
+  data->fValsUncompressed = new float[mat.localNumberOfNonzeros];
   assert(data->fValsUncompressed);
 
   data->bValsCompressed = new uint8_t[valsNeededCompression];
   assert(data->bValsCompressed);
-  data->bValsUncompressed = new double[mat.localNumberOfNonzeros];
+  data->bValsUncompressed = new float[mat.localNumberOfNonzeros];
   assert(data->bValsUncompressed);
 
   //reuse matrix diagonal allocation
-  assert(sizeof(double**) >= sizeof(double)); //ensure the matrixDiagonal array is larger than our new copy.
-  data->diagonalValues = (double*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
+  assert(sizeof(double**) >= sizeof(float)); //ensure the matrixDiagonal array is larger than our new copy.
+  data->diagonalValues = (float*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
   assert(data->diagonalValues);
 
 
@@ -87,8 +87,8 @@ int CreateCompressedArray(SparseMatrix & mat){
           + 2*sizeof(uint8_t)*indsNeededCompression //index compressed arrays
           + 2*sizeof(uint8_t)*valsNeededCompression //value compressed arrays
           + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros //index uncompressed arrays
-          + 2*sizeof(double)*mat.localNumberOfNonzeros //value uncompressed arrays
-          + sizeof(double)*mat.localNumberOfRows; //diagonal
+          + 2*sizeof(float)*mat.localNumberOfNonzeros; //value uncompressed arrays
+          //+ sizeof(float)*mat.localNumberOfRows; //diagonal
 }
 
 

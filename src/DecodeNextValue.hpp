@@ -39,7 +39,7 @@ inline void DecodeNextValue(const SparseMatrix & mat, local_int_t & id, local_in
     //value = value;
   } else {
     //UNCOMPRESSED
-    const double * uncompressedArray;
+    const float * uncompressedArray;
     if (isForward) {
       uncompressedArray = ((CompressionData*)mat.optimizationData)->fValsUncompressed;
     } else {

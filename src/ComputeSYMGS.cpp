@@ -61,7 +61,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 #endif
 
   const local_int_t nrow = A.localNumberOfRows;
-  double * matrixDiagonal = ((CompressionData*)A.optimizationData)->diagonalValues;
+  float * matrixDiagonal = ((CompressionData*)A.optimizationData)->diagonalValues;
   const double * const rv = r.values;
   double * const xv = x.values;
 
