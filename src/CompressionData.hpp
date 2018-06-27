@@ -37,7 +37,7 @@ constexpr const double ABS_ERROR_BOUND = 1e-10;
 constexpr const double PWREL_BOUND_RATIO = 1.0e-10;
 
 //number of bits each value takes up when compressed
-constexpr const int VAL_COMPRESSED_BITS = 2;
+constexpr const int VAL_COMPRESSED_BITS = 1;
 constexpr const int VALUES_PER_COMPRESSED_BYTE = 8/VAL_COMPRESSED_BITS;
 constexpr const int COMPRESSED_VALUE_MASK = (1 << VAL_COMPRESSED_BITS) - 1;
 
@@ -47,11 +47,9 @@ constexpr const int UNCOMPRESSED = 0x00;
 constexpr const int INCREMENT = 0x01;
 //value compression
 constexpr const int NEIGHBOR = 0x01;
-constexpr const int OVER_NEIGHBOR = 0x02; //two elements before
 
 //default values.
 constexpr const int INITIAL_NEIGHBOR = -1;
-constexpr const int INITIAL_OVER_NEIGHBOR = 1;
 
 struct CompressionData_STRUCT {
   uint8_t * fIndsCompressed;

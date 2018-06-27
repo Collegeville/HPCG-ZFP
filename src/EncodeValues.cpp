@@ -39,35 +39,18 @@ inline bool withinTolerance(const double value, const double error) {
   }
 }
 
-inline void compressValue(local_int_t & index, const double value, double & neighbor, double & overNeighbor,
+inline void compressValue(local_int_t & index, const double value, double & neighbor,
                         uint8_t * compressed, double * uncompressedArray, local_int_t & uncompressedCount) {
   double neighborErr = fabs(value-neighbor);
-  double overNeighborErr = fabs(value-overNeighbor);
 
-  double compressedValue;
-  if (neighborErr <= overNeighborErr) {
-    if (withinTolerance(value, neighborErr)) {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
-      compressedValue = neighbor;
-    } else {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
-      uncompressedArray[uncompressedCount] = value;
-      uncompressedCount++;
-      compressedValue = value;
-    }
+  if (withinTolerance(value, neighborErr)) {
+    compressed[index/VALUES_PER_COMPRESSED_BYTE] |= NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
   } else {
-    if (withinTolerance(value, overNeighborErr)) {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= OVER_NEIGHBOR << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
-      compressedValue = overNeighbor;
-    } else {
-      compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
-      uncompressedArray[uncompressedCount] = value;
-      uncompressedCount++;
-      compressedValue = value;
-    }
+    compressed[index/VALUES_PER_COMPRESSED_BYTE] |= UNCOMPRESSED << (index%VALUES_PER_COMPRESSED_BYTE * VAL_COMPRESSED_BITS);
+    uncompressedArray[uncompressedCount] = value;
+    uncompressedCount++;
+    neighbor = value;
   }
-  overNeighbor = neighbor;
-  neighbor = compressedValue;
   index++;
 }
 
@@ -100,20 +83,19 @@ void EncodeValues(SparseMatrix & mat, const bool forward) {
 
   local_int_t index = 0;
   double neighbor = INITIAL_NEIGHBOR;
-  double overNeighbor = INITIAL_OVER_NEIGHBOR;
   local_int_t uncompressedCount = 0;
 
   if (forward) {
     for (local_int_t row = 0; row < mat.localNumberOfRows; row++) {
       for (int j = 0; j < nnzInRow[row]; j++){
-        compressValue(index, values[row][j], neighbor, overNeighbor,
+        compressValue(index, values[row][j], neighbor,
                       compressed, uncompressedArray, uncompressedCount);
       }
     }
   } else {
     for (local_int_t row = mat.localNumberOfRows-1; row >= 0; row--) {
       for (int j = 0; j < nnzInRow[row]; j++){
-        compressValue(index, values[row][j], neighbor, overNeighbor,
+        compressValue(index, values[row][j], neighbor,
                       compressed, uncompressedArray, uncompressedCount);
       }
     }

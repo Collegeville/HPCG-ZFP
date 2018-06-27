@@ -64,7 +64,6 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   local_int_t valsUCount = 0;
   local_int_t indsUCount = 0;
   double curVal = INITIAL_NEIGHBOR;
-  double prevVal = INITIAL_OVER_NEIGHBOR;
   local_int_t curCol = INITIAL_NEIGHBOR;
 
 //#ifndef HPCG_NO_OPENMP
@@ -75,7 +74,7 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
     const int cur_nnz = A.nonzerosInRow[i];
     for (int j=0; j< cur_nnz; j++){
       DecodeNextIndex(A, index, indsUCount, curCol, true);
-      DecodeNextValue(A, index, valsUCount, curVal, prevVal, true);
+      DecodeNextValue(A, index, valsUCount, curVal, true);
       index++;
       sum += curVal*xv[curCol];
     }

@@ -69,7 +69,6 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   local_int_t valsUCount = 0;
   local_int_t indsUCount = 0;
   double curVal = INITIAL_NEIGHBOR;
-  double prevVal = INITIAL_OVER_NEIGHBOR;
   local_int_t curCol = INITIAL_NEIGHBOR;
 
   for (local_int_t i = 0; i < nrow; i++) {
@@ -79,7 +78,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
     for (int j=0; j< currentNumberOfNonzeros; j++) {
       DecodeNextIndex(A, index, indsUCount, curCol, true);
-      DecodeNextValue(A, index, valsUCount, curVal, prevVal, true);
+      DecodeNextValue(A, index, valsUCount, curVal, true);
       index++;
       sum -= curVal*xv[curCol];
     }
@@ -95,7 +94,6 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
   valsUCount = 0;
   indsUCount = 0;
   curVal = INITIAL_NEIGHBOR;
-  prevVal = INITIAL_OVER_NEIGHBOR;
   curCol = INITIAL_NEIGHBOR;
   for (local_int_t i = nrow-1; i >= 0; i--) {
     const int currentNumberOfNonzeros = A.nonzerosInRow[i];
@@ -104,7 +102,7 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
     for (int j = 0; j < currentNumberOfNonzeros; j++) {
       DecodeNextIndex(A, index, indsUCount, curCol, false);
-      DecodeNextValue(A, index, valsUCount, curVal, prevVal, false);
+      DecodeNextValue(A, index, valsUCount, curVal, false);
       index++;
       sum -= curVal*xv[curCol];
     }

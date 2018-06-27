@@ -26,7 +26,7 @@
   @param [inout] value             The previous value decoded, replaced with the new value
   @param [inout] previously        The previous value from the last call to this function
 */
-inline void DecodeNextValue(const SparseMatrix & mat, local_int_t & id, local_int_t & uncompressedCount, double & value, double & previous, bool isForward) {
+inline void DecodeNextValue(const SparseMatrix & mat, local_int_t & id, local_int_t & uncompressedCount, double & value, bool isForward) {
   const uint8_t * compressed;
   if (isForward) {
     compressed = ((CompressionData*)mat.optimizationData)->fValsCompressed;
@@ -34,27 +34,19 @@ inline void DecodeNextValue(const SparseMatrix & mat, local_int_t & id, local_in
     compressed = ((CompressionData*)mat.optimizationData)->bValsCompressed;
   }
 
-  switch ((compressed[id/VALUES_PER_COMPRESSED_BYTE] >> ((id%VALUES_PER_COMPRESSED_BYTE) * VAL_COMPRESSED_BITS)) & COMPRESSED_VALUE_MASK) {
-    case NEIGHBOR:
-      previous = value;
-      break;
-    case OVER_NEIGHBOR: {
-      double temp = previous;
-      previous = value;
-      value = temp;
-      break;
+  if ((compressed[id/VALUES_PER_COMPRESSED_BYTE] >> ((id%VALUES_PER_COMPRESSED_BYTE) * VAL_COMPRESSED_BITS)) & COMPRESSED_VALUE_MASK) {
+    // NEIGHBOR
+    //value = value;
+  } else {
+    //UNCOMPRESSED
+    const double * uncompressedArray;
+    if (isForward) {
+      uncompressedArray = ((CompressionData*)mat.optimizationData)->fValsUncompressed;
+    } else {
+      uncompressedArray = ((CompressionData*)mat.optimizationData)->bValsUncompressed;
     }
-    default: //UNCOMPRESSED
-      const double * uncompressedArray;
-      if (isForward) {
-        uncompressedArray = ((CompressionData*)mat.optimizationData)->fValsUncompressed;
-      } else {
-        uncompressedArray = ((CompressionData*)mat.optimizationData)->bValsUncompressed;
-      }
-      previous = value;
-      value = uncompressedArray[uncompressedCount];
-      uncompressedCount++;
-      break;
+    value = uncompressedArray[uncompressedCount];
+    uncompressedCount++;
   }
 }
 
