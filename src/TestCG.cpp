@@ -62,9 +62,9 @@ int TestCG(SparseMatrix & A, CGData & data, Vector & b, Vector & x, TestCGData &
   InitializeVector(origB, A.localNumberOfRows);
 
   //Setup optimization data to ensure optimized version is used.
-  CreateOptimizedArray(origDiagA);
-  CreateOptimizedArray(exaggeratedDiagA);
-  CreateOptimizedArray(origB);
+  CreateOptimizedVector(origDiagA);
+  CreateOptimizedVector(exaggeratedDiagA);
+  CreateOptimizedVector(origB);
 
   CopyMatrixDiagonal(A, origDiagA);
   CopyVector(origDiagA, exaggeratedDiagA);

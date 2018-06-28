@@ -80,9 +80,9 @@ int TestSymmetry(SparseMatrix & A, Vector & b, Vector & xexact, TestSymmetryData
  FillRandomVector(y_ncol);
 
  //Need optimization applied to be able to use the custom CG impl
- CreateOptimizedArray(x_ncol);
- CreateOptimizedArray(y_ncol);
- CreateOptimizedArray(z_ncol);
+ CreateOptimizedVector(x_ncol);
+ CreateOptimizedVector(y_ncol);
+ CreateOptimizedVector(z_ncol);
 
  double xNorm2, yNorm2;
  double ANorm = 2 * 26.0;

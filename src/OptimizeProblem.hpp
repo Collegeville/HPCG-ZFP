@@ -19,7 +19,7 @@
 #include "Vector.hpp"
 #include "CGData.hpp"
 
-void CreateOptimizedArray(Vector & vect);
+void CreateOptimizedVector(Vector & vect);
 
 int OptimizeProblem(SparseMatrix & A, CGData & data,  Vector & b, Vector & x, Vector & xexact);
 

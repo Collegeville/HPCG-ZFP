@@ -45,11 +45,13 @@ HPCG_DEPS = src/CG.o \
 	    src/init.o \
 	    src/finalize.o \
 	    src/ComputeProlongation.o \
-	    src/ComputeRestriction.o
+	    src/ComputeRestriction.o \
+			src/EncodeValues.o \
+			src/EncodeIndices.o
 
 # These header files are included in many source files, so we recompile every file if one or more of these header is modified.
 PRIMARY_HEADERS = ../src/Geometry.hpp ../src/SparseMatrix.hpp ../src/Vector.hpp ../src/CGData.hpp \
-                  ../src/MGData.hpp ../src/hpcg.hpp
+                  ../src/MGData.hpp ../src/hpcg.hpp ../src/CompressionData.hpp ../src/DecodeNextValue.hpp
 
 all: bin/xhpcg
 
@@ -182,4 +184,10 @@ src/GenerateCoarseProblem.o: ../src/GenerateCoarseProblem.cpp ../src/GenerateCoa
 	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
 
 src/CheckAspectRatio.o: ../src/CheckAspectRatio.cpp ../src/CheckAspectRatio.hpp $(PRIMARY_HEADERS)
+	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
+
+src/EncodeValues.o: ../src/EncodeValues.cpp ../src/EncodeValues.hpp $(PRIMARY_HEADERS)
+	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
+
+src/EncodeIndices.o: ../src/EncodeIndices.cpp ../src/EncodeIndices.hpp $(PRIMARY_HEADERS)
 	$(CXX) -c $(CXXFLAGS) -I../src $< -o $@
