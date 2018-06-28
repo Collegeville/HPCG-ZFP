@@ -19,7 +19,10 @@
  */
 
 #include "ComputeWAXPBY.hpp"
-#include "ComputeWAXPBY_ref.hpp"
+#ifndef HPCG_NO_OPENMP
+#include <omp.h>
+#endif
+#include <cassert>
 
 /*!
   Routine to compute the update of a vector with the sum of two
@@ -42,7 +45,28 @@
 int ComputeWAXPBY(const local_int_t n, const double alpha, const Vector & x,
     const double beta, const Vector & y, Vector & w, bool & isOptimized) {
 
-  // This line and the next two lines should be removed and your version of ComputeWAXPBY should be used.
-  isOptimized = false;
-  return ComputeWAXPBY_ref(n, alpha, x, beta, y, w);
+  assert(x.localLength>=n); // Test vector lengths
+	assert(y.localLength>=n);
+
+	const float * const xv = (float*)x.optimizationData;
+	const float * const yv = (float*)y.optimizationData;
+	float * const wv = (float*)w.optimizationData;
+  if (alpha==1.0) {
+#ifndef HPCG_NO_OPENMP
+    #pragma omp parallel for
+#endif
+    for (local_int_t i=0; i<n; i++) wv[i] = (double)xv[i] + beta * (double)yv[i];
+  } else if (beta==1.0) {
+#ifndef HPCG_NO_OPENMP
+    #pragma omp parallel for
+#endif
+    for (local_int_t i=0; i<n; i++) wv[i] = alpha * (double)xv[i] + (double)yv[i];
+  } else  {
+#ifndef HPCG_NO_OPENMP
+    #pragma omp parallel for
+#endif
+    for (local_int_t i=0; i<n; i++) wv[i] = alpha * (double)xv[i] + beta * (double)yv[i];
+  }
+
+  return 0;
 }

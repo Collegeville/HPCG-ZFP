@@ -48,8 +48,8 @@
 */
 int ComputeResidual(const local_int_t n, const Vector & v1, const Vector & v2, double & residual) {
 
-  double * v1v = v1.values;
-  double * v2v = v2.values;
+  float * v1v = (float*)v1.optimizationData;
+  float * v2v = (float*)v2.optimizationData;
   double local_residual = 0.0;
 
 #ifndef HPCG_NO_OPENMP

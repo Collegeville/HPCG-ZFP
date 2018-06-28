@@ -40,11 +40,8 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
   local_int_t * receiveLength = A.receiveLength;
   local_int_t * sendLength = A.sendLength;
   int * neighbors = A.neighbors;
-  double * sendBuffer = A.sendBuffer;
   local_int_t totalToBeSent = A.totalToBeSent;
   local_int_t * elementsToSend = A.elementsToSend;
-
-  double * const xv = x.values;
 
   int size, rank; // Number of MPI processes, My process ID
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -60,36 +57,77 @@ void ExchangeHalo(const SparseMatrix & A, Vector & x) {
 
   MPI_Request * request = new MPI_Request[num_neighbors];
 
-  //
-  // Externals are at end of locals
-  //
-  double * x_external = (double *) xv + localNumberOfRows;
 
-  // Post receives first
-  // TODO: Thread this loop
-  for (int i = 0; i < num_neighbors; i++) {
-    local_int_t n_recv = receiveLength[i];
-    MPI_Irecv(x_external, n_recv, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
-    x_external += n_recv;
-  }
+  if (x.optimizationData) {
+    float * sendBuffer = (float*) A.sendBuffer;
+    float * const xv = (float*)x.optimizationData;
+
+    //
+    // Externals are at end of locals
+    //
+    float * x_external = (float *) xv + localNumberOfRows;
+
+    // Post receives first
+    // TODO: Thread this loop
+    for (int i = 0; i < num_neighbors; i++) {
+      local_int_t n_recv = receiveLength[i];
+      MPI_Irecv(x_external, n_recv, MPI_FLOAT, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
+      x_external += n_recv;
+    }
 
 
-  //
-  // Fill up send buffer
-  //
+    //
+    // Fill up send buffer
+    //
 
-  // TODO: Thread this loop
-  for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
+    // TODO: Thread this loop
+    for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
 
-  //
-  // Send to each neighbor
-  //
+    //
+    // Send to each neighbor
+    //
 
-  // TODO: Thread this loop
-  for (int i = 0; i < num_neighbors; i++) {
-    local_int_t n_send = sendLength[i];
-    MPI_Send(sendBuffer, n_send, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD);
-    sendBuffer += n_send;
+    // TODO: Thread this loop
+    for (int i = 0; i < num_neighbors; i++) {
+      local_int_t n_send = sendLength[i];
+      MPI_Send(sendBuffer, n_send, MPI_FLOAT, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD);
+      sendBuffer += n_send;
+    }
+  } else {
+    double * sendBuffer = A.sendBuffer;
+    double * const xv = x.values;
+
+    //
+    // Externals are at end of locals
+    //
+    double * x_external = (double *) xv + localNumberOfRows;
+
+    // Post receives first
+    // TODO: Thread this loop
+    for (int i = 0; i < num_neighbors; i++) {
+      local_int_t n_recv = receiveLength[i];
+      MPI_Irecv(x_external, n_recv, MPI_FLOAT, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
+      x_external += n_recv;
+    }
+
+
+    //
+    // Fill up send buffer
+    //
+
+    // TODO: Thread this loop
+    for (local_int_t i=0; i<totalToBeSent; i++) sendBuffer[i] = xv[elementsToSend[i]];
+
+    //
+    // Send to each neighbor
+    //
+
+    // TODO: Thread this loop
+    for (int i = 0; i < num_neighbors; i++) {
+      local_int_t n_send = sendLength[i];
+      MPI_Send(sendBuffer, n_send, MPI_FLOAT, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD);
+      sendBuffer += n_send;
+    }
   }
 
   //

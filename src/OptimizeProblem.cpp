@@ -19,6 +19,25 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+/*!
+  helper function to create optimized array for vector
+
+  @param[inout] vect   The vector to create a zfp array for
+
+  @return returns the number of bytes used for the array
+*/
+void CreateOptimizedArray(Vector & vect){
+
+  vect.optimizationData = vect.values;
+  float * vals = (float*)vect.optimizationData;
+
+  for (int i = 0; i < vect.localLength; i++){
+    vals[i] = vect.values[i];
+  }
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +114,37 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  CreateOptimizedArray(b);
+  CreateOptimizedArray(x);
+  CreateOptimizedArray(xexact);
+  CreateOptimizedArray(data.r);
+  CreateOptimizedArray(data.z);
+  CreateOptimizedArray(data.p);
+  CreateOptimizedArray(data.Ap);
+
+  SparseMatrix * Anext = &A;
+
+  while (Anext) {
+    if (Anext->mgData) {
+      if ((void*)Anext->mgData->rc != (void*)0) {
+        CreateOptimizedArray(*Anext->mgData->rc);
+      }
+      if ((void*)Anext->mgData->rc != (void*)0) {
+        CreateOptimizedArray(*Anext->mgData->xc);
+      }
+      if ((void*)Anext->mgData->rc != (void*)0) {
+        CreateOptimizedArray(*Anext->mgData->Axf);
+      }
+    }
+    Anext = Anext->Ac;
+  }
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return 0;
 
 }

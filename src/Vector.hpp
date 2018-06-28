@@ -56,8 +56,13 @@ inline void InitializeVector(Vector & v, local_int_t localLength) {
  */
 inline void ZeroVector(Vector & v) {
   local_int_t localLength = v.localLength;
-  double * vv = v.values;
-  for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  if (v.optimizationData) {
+    float * vv = (float*)v.optimizationData;
+    for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  } else {
+    double * vv = v.values;
+    for (int i=0; i<localLength; ++i) vv[i] = 0.0;
+  }
   return;
 }
 /*!
@@ -69,7 +74,7 @@ inline void ZeroVector(Vector & v) {
  */
 inline void ScaleVectorValue(Vector & v, local_int_t index, double value) {
   assert(index>=0 && index < v.localLength);
-  double * vv = v.values;
+  float * vv = (float*)v.optimizationData;
   vv[index] *= value;
   return;
 }
@@ -80,8 +85,13 @@ inline void ScaleVectorValue(Vector & v, local_int_t index, double value) {
  */
 inline void FillRandomVector(Vector & v) {
   local_int_t localLength = v.localLength;
-  double * vv = v.values;
-  for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  if (v.optimizationData) {
+    float * vv = (float*)v.optimizationData;
+    for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  } else {
+    double * vv = v.values;
+    for (int i=0; i<localLength; ++i) vv[i] = rand() / (double)(RAND_MAX) + 1.0;
+  }
   return;
 }
 /*!
@@ -93,9 +103,15 @@ inline void FillRandomVector(Vector & v) {
 inline void CopyVector(const Vector & v, Vector & w) {
   local_int_t localLength = v.localLength;
   assert(w.localLength >= localLength);
-  double * vv = v.values;
-  double * wv = w.values;
-  for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  if (v.optimizationData) {
+    float * vv = (float*)v.optimizationData;
+    float * wv = (float*)w.optimizationData;
+    for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  } else {
+    double * vv = v.values;
+    double * wv = w.values;
+    for (int i=0; i<localLength; ++i) wv[i] = vv[i];
+  }
   return;
 }
 
