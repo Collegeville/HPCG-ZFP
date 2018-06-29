@@ -19,7 +19,18 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+#ifndef HPCG_NO_MPI
+#include <mpi.h>
+#endif
+#include <cassert>
+#include <cmath>
+#include "CompressionData.hpp"
+#include "EncodeValues.hpp"
+#include "EncodeIndices.hpp"
 #include <type_traits>
+
+double optimizationAllocation = 0.0;
 
 /*!
   helper function to create optimized array for vector
@@ -43,6 +54,67 @@ void CreateOptimizedArray(Vector<T> & vect){
 
 template void CreateOptimizedArray<float>(Vector<float> & vect);
 template void CreateOptimizedArray<double>(Vector<double> & vect);
+
+
+
+/*!
+  helper function to create compressionData
+
+  @param[inout] mat   The matrix to optimize
+
+  @return the number of bytes used
+*/
+int CreateCompressedArray(SparseMatrix & mat){
+  local_int_t indsNeededCompression = ceil(mat.localNumberOfNonzeros/(double)8);
+  local_int_t valsNeededCompression = ceil(mat.localNumberOfNonzeros/(double)VALUES_PER_COMPRESSED_BYTE);
+
+  CompressionData * data = new CompressionData();
+  mat.optimizationData = data;
+
+  data->fIndsCompressed = new uint8_t[indsNeededCompression];
+  assert(data->fIndsCompressed);
+  data->fIndsUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->fIndsUncompressed);
+
+  data->bIndsCompressed = new uint8_t[indsNeededCompression];
+  assert(data->bIndsCompressed);
+  data->bIndsUncompressed = new local_int_t[mat.localNumberOfNonzeros];
+  assert(data->bIndsUncompressed);
+
+  data->fValsCompressed = new uint8_t[valsNeededCompression];
+  assert(data->fValsCompressed);
+  data->fValsUncompressed = new float[mat.localNumberOfNonzeros];
+  assert(data->fValsUncompressed);
+
+  data->bValsCompressed = new uint8_t[valsNeededCompression];
+  assert(data->bValsCompressed);
+  data->bValsUncompressed = new float[mat.localNumberOfNonzeros];
+  assert(data->bValsUncompressed);
+
+  //reuse matrix diagonal allocation
+  assert(sizeof(double**) >= sizeof(float)); //ensure the matrixDiagonal array is larger than our new copy.
+  data->diagonalValues = (float*)mat.matrixDiagonal; //new double[mat.localNumberOfRows];
+  assert(data->diagonalValues);
+
+
+  EncodeIndices(mat, true);
+  EncodeIndices(mat, false);
+  EncodeValues(mat, true);
+  EncodeValues(mat, false);
+
+  //copy diagonal into array to get 8 vals per cache line instead of 1 val per cache line of mat.matrixDiagonal
+  //The values are compressed serially, so a pointer/index of an entry doesn't work.
+  for (local_int_t i = 0; i < mat.localNumberOfRows; i++){
+    data->diagonalValues[i] = mat.matrixDiagonal[i][0];
+  }
+
+  return sizeof(*data)
+          + 2*sizeof(uint8_t)*indsNeededCompression //index compressed arrays
+          + 2*sizeof(uint8_t)*valsNeededCompression //value compressed arrays
+          + 2*sizeof(local_int_t)*mat.localNumberOfNonzeros //index uncompressed arrays
+          + 2*sizeof(float)*mat.localNumberOfNonzeros; //value uncompressed arrays
+          //+ sizeof(float)*mat.localNumberOfRows; //diagonal
+}
 
 
 /*!
@@ -129,8 +201,9 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector<b_type> & b, Vector<
   CreateOptimizedArray(data.p);
   CreateOptimizedArray(data.Ap);
 
-  SparseMatrix * Anext = &A;
+  double bytes = 0;
 
+  SparseMatrix * Anext = &A;
   while (Anext) {
     if (Anext->mgData) {
       if ((void*)Anext->mgData->rc != (void*)0) {
@@ -143,8 +216,17 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector<b_type> & b, Vector<
         CreateOptimizedArray(*Anext->mgData->Axf);
       }
     }
+    bytes += CreateCompressedArray(*Anext);
     Anext = Anext->Ac;
   }
+
+  #ifndef HPCG_NO_MPI
+    // Use MPI's reduce function to collect all partial sums
+    MPI_Allreduce(&bytes, &optimizationAllocation, 1, MPI_DOUBLE, MPI_SUM,
+        MPI_COMM_WORLD);
+  #else
+    optimizationAllocation = bytes;
+  #endif
 
   return 0;
 }
@@ -152,6 +234,6 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector<b_type> & b, Vector<
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0;
+  return optimizationAllocation;
 
 }
