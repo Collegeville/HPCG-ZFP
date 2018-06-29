@@ -182,7 +182,7 @@ void ReportResults(const SparseMatrix & A, int numberOfMgLevels, int numberOfCgS
         fnbytes_Af += fnrow_Af*((double) sizeof(local_int_t)); // f2cOperator
         fnbytes_Af += fnrow_Af*((double) sizeof(double)); // rc
         fnbytes_Af += 2.0*fncol_Af*((double) sizeof(double)); // xc, Axf are estimated based on the size of these arrays on rank 0
-        fnbytes_Af += ((double) (sizeof(Geometry)+sizeof(SparseMatrix)+3*sizeof(Vector)+sizeof(MGData))); // Account for structs geomc, Ac, rc, xc, Axf - (minor)
+        fnbytes_Af += ((double) (sizeof(Geometry)+sizeof(SparseMatrix)+3*sizeof(Vector<double>)+sizeof(MGData))); // Account for structs geomc, Ac, rc, xc, Axf - (minor)
 
         // Model for GenerateProblem.cpp (called within GenerateCoarseProblem.cpp)
         fnbytes_Af += fnrow_Af*sizeof(char);      // array nonzerosInRow

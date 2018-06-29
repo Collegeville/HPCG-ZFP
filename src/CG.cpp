@@ -56,7 +56,7 @@
 
   @see CG_ref()
 */
-int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
+int CG(const SparseMatrix & A, CGData & data, const Vector<b_type> & b, Vector<x_type> & x,
     const int max_iter, const double tolerance, int & niters, double & normr, double & normr0,
     double * times, bool doPreconditioning) {
 
@@ -70,10 +70,10 @@ int CG(const SparseMatrix & A, CGData & data, const Vector & b, Vector & x,
 //  double t6 = 0.0;
 //#endif
   local_int_t nrow = A.localNumberOfRows;
-  Vector & r = data.r; // Residual vector
-  Vector & z = data.z; // Preconditioned residual vector
-  Vector & p = data.p; // Direction vector (in MPI mode ncol>=nrow)
-  Vector & Ap = data.Ap;
+  Vector<double> & r = data.r; // Residual vector
+  Vector<double> & z = data.z; // Preconditioned residual vector
+  Vector<double> & p = data.p; // Direction vector (in MPI mode ncol>=nrow)
+  Vector<float> & Ap = data.Ap;
 
   if (!doPreconditioning && A.geom->rank==0) HPCG_fout << "WARNING: PERFORMING UNPRECONDITIONED ITERATIONS" << std::endl;
 

@@ -89,9 +89,9 @@ void GenerateCoarseProblem(const SparseMatrix & Af) {
   InitializeSparseMatrix(*Ac, geomc);
   GenerateProblem(*Ac, 0, 0, 0);
   SetupHalo(*Ac);
-  Vector *rc = new Vector;
-  Vector *xc = new Vector;
-  Vector * Axf = new Vector;
+  Vector<double> *rc = new Vector<double>;
+  Vector<float>  *xc = new Vector<float>;
+  Vector<double> * Axf = new Vector<double>;
   InitializeVector(*rc, Ac->localNumberOfRows);
   InitializeVector(*xc, Ac->localNumberOfColumns);
   InitializeVector(*Axf, Af.localNumberOfColumns);

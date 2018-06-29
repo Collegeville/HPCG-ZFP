@@ -25,10 +25,10 @@
 #include "Vector.hpp"
 
 struct CGData_STRUCT {
-  Vector r; //!< pointer to residual vector
-  Vector z; //!< pointer to preconditioned residual vector
-  Vector p; //!< pointer to direction vector
-  Vector Ap; //!< pointer to Krylov vector
+  Vector<double> r; //!< pointer to residual vector
+  Vector<double> z; //!< pointer to preconditioned residual vector
+  Vector<double> p; //!< pointer to direction vector
+  Vector<float> Ap; //!< pointer to Krylov vector
 };
 typedef struct CGData_STRUCT CGData;
 
@@ -63,4 +63,3 @@ inline void DeleteCGData(CGData & data) {
 }
 
 #endif // CGDATA_HPP
-

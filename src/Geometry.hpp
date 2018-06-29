@@ -37,6 +37,9 @@ typedef int local_int_t;
 //typedef int global_int_t;
 typedef long long global_int_t;
 
+typedef float b_type;
+typedef float x_type;
+
 // This macro should be defined if the global_int_t is not long long
 // in order to stop complaints from non-C++11 compliant compilers.
 //#define HPCG_NO_LONG_LONG

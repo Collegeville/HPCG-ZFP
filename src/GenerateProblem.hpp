@@ -17,5 +17,5 @@
 #include "SparseMatrix.hpp"
 #include "Vector.hpp"
 
-void GenerateProblem(SparseMatrix & A, Vector * b, Vector * x, Vector * xexact);
+void GenerateProblem(SparseMatrix & A, Vector<b_type> * b, Vector<x_type> * x, Vector<x_type> * xexact);
 #endif // GENERATEPROBLEM_HPP

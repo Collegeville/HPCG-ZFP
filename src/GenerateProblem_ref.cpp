@@ -47,7 +47,7 @@ using std::endl;
   @see GenerateGeometry
 */
 
-void GenerateProblem_ref(SparseMatrix & A, Vector * b, Vector * x, Vector * xexact) {
+void GenerateProblem_ref(SparseMatrix & A, Vector<b_type> * b, Vector<x_type> * x, Vector<x_type> * xexact) {
 
   // Make local copies of geometry information.  Use global_int_t since the RHS products in the calculations
   // below may result in global range values.

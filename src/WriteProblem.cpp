@@ -50,7 +50,7 @@
   @see GenerateProblem
 */
 int WriteProblem( const Geometry & geom, const SparseMatrix & A,
-    const Vector b, const Vector x, const Vector xexact) {
+    const Vector<double> b, const Vector<double> x, const Vector<double> xexact) {
 
   if (geom.size!=1) return -1; //TODO Only works on one processor.  Need better error handler
   const global_int_t nrow = A.totalNumberOfRows;
@@ -79,9 +79,9 @@ int WriteProblem( const Geometry & geom, const SparseMatrix & A,
 #else
       fprintf(fA, " %lld %lld %22.16e\n",i+1,(global_int_t)(currentRowIndices[j]+1),currentRowValues[j]);
 #endif
-    fprintf(fx, "%22.16e\n",x.values[i]);
-    fprintf(fxexact, "%22.16e\n",xexact.values[i]);
-    fprintf(fb, "%22.16e\n",b.values[i]);
+    fprintf(fx, "%22.16e\n",((x_type*)x.optimizationData)[i]);
+    fprintf(fxexact, "%22.16e\n",((x_type*)xexact.optimizationData)[i]);
+    fprintf(fb, "%22.16e\n",((x_type*)b.optimizationData)[i]);
   }
 
   fclose(fA);

@@ -133,7 +133,8 @@ int main(int argc, char * argv[]) {
   SparseMatrix A;
   InitializeSparseMatrix(A, geom);
 
-  Vector b, x, xexact;
+  Vector<b_type> b;
+  Vector<x_type> x, xexact;
   GenerateProblem(A, &b, &x, &xexact);
   SetupHalo(A);
   int numberOfMgLevels = 4; // Number of levels including first
@@ -147,9 +148,9 @@ int main(int argc, char * argv[]) {
   times[9] = setup_time; // Save it for reporting
 
   curLevelMatrix = &A;
-  Vector * curb = &b;
-  Vector * curx = &x;
-  Vector * curxexact = &xexact;
+  Vector<b_type> * curb = &b;
+  Vector<x_type> * curx = &x;
+  Vector<x_type> * curxexact = &xexact;
   for (int level = 0; level< numberOfMgLevels; ++level) {
      CheckProblem(*curLevelMatrix, curb, curx, curxexact);
      curLevelMatrix = curLevelMatrix->Ac; // Make the nextcoarse grid the next level
@@ -173,7 +174,8 @@ int main(int argc, char * argv[]) {
   local_int_t nrow = A.localNumberOfRows;
   local_int_t ncol = A.localNumberOfColumns;
 
-  Vector x_overlap, b_computed;
+  Vector<x_type> x_overlap;
+  Vector<b_type> b_computed;
   InitializeVector(x_overlap, ncol); // Overlapped copy of x vector
   InitializeVector(b_computed, nrow); // Computed RHS vector
 
