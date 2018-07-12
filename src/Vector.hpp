@@ -61,7 +61,6 @@ inline void InitializeVector(Vector & v, local_int_t localLength) {
 inline void ZeroVector(Vector & v) {
   local_int_t localLength = v.localLength;
   if (v.optimizationData) {
-    double vBlock [BLOCK_SIZE] = {};
     local_int_t numBlocks = ceil(localLength/(double)BLOCK_SIZE);
 
 

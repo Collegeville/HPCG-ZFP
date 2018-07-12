@@ -47,6 +47,7 @@ inline int DoDecode(const local_int_t startIndex, const local_int_t blockLength,
 
     block[index] = value;
   }
+  return 0;
 }
 
 
@@ -119,10 +120,11 @@ int ResumePartialDecodeBlock(const Vector & vect, const local_int_t blockid, con
 
   int uncompressedCount = ((int*)(block+previousEnd))[0];
 
-  DoDecode(previousEnd, blockLength, uncompressedCount, compressed, block);
+  int ret = DoDecode(previousEnd, blockLength, uncompressedCount, compressed, block);
 
   if (blockLength != BLOCK_SIZE) {
     //If there is room at the end of the block, place the uncompressed count to allow resuming
     ((int*)(block+blockLength))[0] = uncompressedCount;
   }
+  return ret;
 }
