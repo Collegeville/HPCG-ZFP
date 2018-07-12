@@ -22,6 +22,9 @@
 #ifndef HPCG_NO_MPI
 #include "ExchangeHalo.hpp"
 #endif
+#ifndef HPCG_NO_OMP
+#include <omp.h>
+#endif
 #include <cassert>
 #include "DecodeNextIndex.hpp"
 
@@ -67,43 +70,58 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
   uint8_t ** indices = ((CompressionData*)A.optimizationData)->mtxIndL;
 
-  for (local_int_t i=0; i< nrow; i++) {
-    const float * currentValues = matrixValues[i];
-    const uint8_t * const cur_inds = indices[i];
-    int bitPosition = 0;
-    local_int_t curCol = -1;
-    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const float  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
-    double sum = rv[i]; // RHS value
+  #ifndef HPCG_NO_OMP
+    #pragma omp parallel
+  #endif
+  {
+    #ifndef HPCG_NO_OMP
+      int threadnum = omp_get_thread_num();
+      int numthreads = omp_get_num_threads();
+      local_int_t loopStart = nrow*threadnum/numthreads;
+      local_int_t loopEnd = nrow*(threadnum+1)/numthreads;
+    #else
+      local_int_t loopStart = 0;
+      local_int_t loopEnd = nrow;
+    #endif
 
-    for (int j=0; j< currentNumberOfNonzeros; j++) {
-      DecodeNextIndex(cur_inds, bitPosition, curCol);
-      sum -= currentValues[j] * xv[curCol];
+    for (local_int_t i=loopStart; i< loopEnd; i++) {
+      const float * currentValues = matrixValues[i];
+      const uint8_t * const cur_inds = indices[i];
+      int bitPosition = 0;
+      local_int_t curCol = -1;
+      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+      const float  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
+      double sum = rv[i]; // RHS value
+
+      for (int j=0; j< currentNumberOfNonzeros; j++) {
+        DecodeNextIndex(cur_inds, bitPosition, curCol);
+        sum -= currentValues[j] * xv[curCol];
+      }
+      sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
+
+      xv[i] = sum/currentDiagonal;
+
     }
-    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
-    xv[i] = sum/currentDiagonal;
+    // Now the back sweep.
 
-  }
+    for (local_int_t i=loopEnd-1; i>=loopStart; i--) {
+      const float * currentValues = matrixValues[i];
+      const uint8_t * const cur_inds = indices[i];
+      int bitPosition = 0;
+      local_int_t curCol = -1;
+      const int currentNumberOfNonzeros = A.nonzerosInRow[i];
+      const float  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
+      double sum = rv[i]; // RHS value
 
-  // Now the back sweep.
+      for (int j = 0; j< currentNumberOfNonzeros; j++) {
+        DecodeNextIndex(cur_inds, bitPosition, curCol);
+        sum -= currentValues[j]*xv[curCol];
+      }
+      sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
 
-  for (local_int_t i=nrow-1; i>=0; i--) {
-    const float * currentValues = matrixValues[i];
-    const uint8_t * const cur_inds = indices[i];
-    int bitPosition = 0;
-    local_int_t curCol = -1;
-    const int currentNumberOfNonzeros = A.nonzerosInRow[i];
-    const float  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
-    double sum = rv[i]; // RHS value
-
-    for (int j = 0; j< currentNumberOfNonzeros; j++) {
-      DecodeNextIndex(cur_inds, bitPosition, curCol);
-      sum -= currentValues[j]*xv[curCol];
+      xv[i] = sum/currentDiagonal;
     }
-    sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
-
-    xv[i] = sum/currentDiagonal;
   }
 
   return 0;
