@@ -70,11 +70,11 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
 
   uint8_t ** indices = ((CompressionData*)A.optimizationData)->mtxIndL;
 
-  #ifndef HPCG_NO_OMP
+  #ifndef HPCG_NO_OPENMP
     #pragma omp parallel
   #endif
   {
-    #ifndef HPCG_NO_OMP
+    #ifndef HPCG_NO_OPENMP
       int threadnum = omp_get_thread_num();
       int numthreads = omp_get_num_threads();
       local_int_t loopStart = nrow*threadnum/numthreads;
