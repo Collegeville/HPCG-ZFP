@@ -27,7 +27,7 @@
 #include "Geometry.hpp"
 
 
-constexpr int WINDOW_SIZE = 8;
+constexpr int WINDOW_SIZE = 12;
 constexpr int WINDOW_SIZE_BITS = 4; //bytes needed to hold a window size value
 static_assert(std::pow(2, WINDOW_SIZE_BITS)-1 >= WINDOW_SIZE, "Not enought bits for window size");
 

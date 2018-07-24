@@ -63,15 +63,15 @@ int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
   #pragma omp parallel for
 #endif
   for (local_int_t i=0; i< nrow; i++)  {
-    double sum = 0.0;
     const double * const cur_vals = A.matrixValues[i];
     const int cur_nnz = A.nonzerosInRow[i];
 
-    local_int_t cur_col;
-    uint64_t position = 0;
+    local_int_t cur_col = DecodeFirstIndex(Adata, i);
+    uint64_t position = Adata.firstIndBits;
+    double sum = cur_vals[0]*xv[cur_col];
 
-    for (int j=0; j< cur_nnz; j++) {
-      DecodeIndex(Adata, i, cur_col, position);
+    for (int j=1; j< cur_nnz; j++) {
+      DecodeTabledIndex(Adata, i, cur_col, position);
       sum += cur_vals[j]*xv[cur_col];
     }
     yv[i] = sum;

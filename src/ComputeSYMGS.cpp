@@ -73,11 +73,12 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
     const double  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
     double sum = rv[i]; // RHS value
 
-    local_int_t curCol;
-    uint64_t position = 0;
+    local_int_t curCol = DecodeFirstIndex(Adata, i);
+    uint64_t position = Adata.firstIndBits;
+    sum -= currentValues[0] * xv[curCol];
 
-    for (int j=0; j< currentNumberOfNonzeros; j++) {
-      DecodeIndex(Adata, i, curCol, position);
+    for (int j=1; j< currentNumberOfNonzeros; j++) {
+      DecodeTabledIndex(Adata, i, curCol, position);
       sum -= currentValues[j] * xv[curCol];
     }
     sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
@@ -94,11 +95,12 @@ int ComputeSYMGS( const SparseMatrix & A, const Vector & r, Vector & x) {
     const double  currentDiagonal = matrixDiagonal[i][0]; // Current diagonal value
     double sum = rv[i]; // RHS value
 
-    local_int_t curCol;
-    uint64_t position = 0;
+    local_int_t curCol = DecodeFirstIndex(Adata, i);
+    uint64_t position = Adata.firstIndBits;
+    sum -= currentValues[0] * xv[curCol];
 
-    for (int j = 0; j< currentNumberOfNonzeros; j++) {
-      DecodeIndex(Adata, i, curCol, position);
+    for (int j=1; j< currentNumberOfNonzeros; j++) {
+      DecodeTabledIndex(Adata, i, curCol, position);
       sum -= currentValues[j]*xv[curCol];
     }
     sum += xv[i]*currentDiagonal; // Remove diagonal contribution from previous loop
