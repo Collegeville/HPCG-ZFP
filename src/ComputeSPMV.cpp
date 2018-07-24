@@ -19,7 +19,16 @@
  */
 
 #include "ComputeSPMV.hpp"
-#include "ComputeSPMV_ref.hpp"
+
+#ifndef HPCG_NO_MPI
+#include "ExchangeHalo.hpp"
+#endif
+
+#ifndef HPCG_NO_OPENMP
+#include <omp.h>
+#endif
+#include <cassert>
+#include "DecodeNextIndex.hpp"
 
 /*!
   Routine to compute sparse matrix vector product y = Ax where:
@@ -39,7 +48,33 @@
 */
 int ComputeSPMV( const SparseMatrix & A, Vector & x, Vector & y) {
 
-  // This line and the next two lines should be removed and your version of ComputeSPMV should be used.
-  A.isSpmvOptimized = false;
-  return ComputeSPMV_ref(A, x, y);
+  assert(x.localLength>=A.localNumberOfColumns); // Test vector lengths
+  assert(y.localLength>=A.localNumberOfRows);
+
+#ifndef HPCG_NO_MPI
+    ExchangeHalo(A,x);
+#endif
+  const double * const xv = x.values;
+  double * const yv = y.values;
+  const local_int_t nrow = A.localNumberOfRows;
+  CompressionData & Adata = *(CompressionData*)A.optimizationData;
+
+#ifndef HPCG_NO_OPENMP
+  #pragma omp parallel for
+#endif
+  for (local_int_t i=0; i< nrow; i++)  {
+    double sum = 0.0;
+    const double * const cur_vals = A.matrixValues[i];
+    const int cur_nnz = A.nonzerosInRow[i];
+
+    local_int_t cur_col;
+    uint64_t position = 0;
+
+    for (int j=0; j< cur_nnz; j++) {
+      DecodeIndex(Adata, i, cur_col, position);
+      sum += cur_vals[j]*xv[cur_col];
+    }
+    yv[i] = sum;
+  }
+  return 0;
 }

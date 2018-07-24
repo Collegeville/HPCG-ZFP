@@ -19,6 +19,37 @@
  */
 
 #include "OptimizeProblem.hpp"
+
+#ifndef HPCG_NO_MPI
+  #include <mpi.h>
+#endif
+
+#include <cassert>
+#include <cmath>
+#include "CompressionData.hpp"
+#include "EncodeIndices.hpp"
+
+double optimizationAllocation = 0.0;
+
+
+/*!
+  helper function to create compressionData
+
+  @param[inout] mat   The matrix to optimize
+
+  @return the number of bytes used
+*/
+int CreateCompressedArray(SparseMatrix & mat){
+
+  CompressionData * data = new CompressionData();
+  mat.optimizationData = data;
+  data->numRows = mat.localNumberOfRows;
+  double memUsage = EncodeIndices(mat);
+
+  return sizeof(CompressionData) + memUsage;
+}
+
+
 /*!
   Optimizes the data structures used for CG iteration to increase the
   performance of the benchmark version of the preconditioned CG algorithm.
@@ -95,12 +126,28 @@ int OptimizeProblem(SparseMatrix & A, CGData & data, Vector & b, Vector & x, Vec
     colors[i] = counters[colors[i]]++;
 #endif
 
+  double bytes = 0;
+
+  SparseMatrix * Anext = &A;
+  while (Anext) {
+    bytes += CreateCompressedArray(*Anext);
+    Anext = Anext->Ac;
+  }
+
+#ifndef HPCG_NO_MPI
+  // Use MPI's reduce function to collect all partial sums
+  MPI_Allreduce(&bytes, &optimizationAllocation, 1, MPI_DOUBLE, MPI_SUM,
+      MPI_COMM_WORLD);
+#else
+  optimizationAllocation = bytes;
+#endif
+
   return 0;
 }
 
 // Helper function (see OptimizeProblem.hpp for details)
 double OptimizeProblemMemoryUse(const SparseMatrix & A) {
 
-  return 0.0;
+  return optimizationAllocation;
 
 }
