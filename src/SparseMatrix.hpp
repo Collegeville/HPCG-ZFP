@@ -24,9 +24,11 @@
 #include <map>
 #include <vector>
 #include <cassert>
+#include <cstdint>
 #include "Geometry.hpp"
 #include "Vector.hpp"
 #include "MGData.hpp"
+#include "CompressionData.hpp"
 
 struct SparseMatrix_STRUCT {
   char  * title; //!< name of the sparse matrix
@@ -129,12 +131,16 @@ inline void CopyMatrixDiagonal(SparseMatrix & A, Vector<T> & diagonal) {
   @param[inout] A The system matrix.
   @param[in] diagonal  Vector of diagonal values that will replace existing matrix diagonal values.
  */
-template <class T>
-inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector<T> & diagonal) {
-    double ** curDiagA = A.matrixDiagonal;
-    T * dv = (T*)diagonal.optimizationData;
-    assert(A.localNumberOfRows==diagonal.localLength);
-    for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+ template <class T>
+ inline void ReplaceMatrixDiagonal(SparseMatrix & A, Vector<T> & diagonal) {
+   double ** curDiagA = A.matrixDiagonal;
+   T * dv = (T*)diagonal.optimizationData;
+   assert(A.localNumberOfRows==diagonal.localLength);
+  for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(curDiagA[i]) = dv[i];
+  if (A.optimizationData) {
+    float ** optDiagA = ((CompressionData*)A.optimizationData)->matrixDiagonal;
+    for (local_int_t i=0; i<A.localNumberOfRows; ++i) *(optDiagA[i]) = dv[i];
+  }
   return;
 }
 /*!
@@ -168,6 +174,12 @@ inline void DeleteMatrix(SparseMatrix & A) {
   if (A.geom!=0) { delete A.geom; A.geom = 0;}
   if (A.Ac!=0) { DeleteMatrix(*A.Ac); delete A.Ac; A.Ac = 0;} // Delete coarse matrix
   if (A.mgData!=0) { DeleteMGData(*A.mgData); delete A.mgData; A.mgData = 0;} // Delete MG data
+
+  if (A.optimizationData) {
+    DeleteCompressionData(*(CompressionData*)A.optimizationData);
+    delete (CompressionData*)A.optimizationData;
+    A.optimizationData = 0;
+  }
   return;
 }
 

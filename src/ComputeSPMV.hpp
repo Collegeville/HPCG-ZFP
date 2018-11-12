@@ -25,6 +25,7 @@
 #include <cassert>
 #include "SparseMatrix.hpp"
 #include "Vector.hpp"
+#include "DecodeNextIndex.hpp"
 
 
 /*!
@@ -56,17 +57,23 @@ int ComputeSPMV( const SparseMatrix & A, Vector<T> & x, Vector<U> & y) {
   const T * const xv = (T*)x.optimizationData;
   U * const yv = (U*)y.optimizationData;
   const local_int_t nrow = A.localNumberOfRows;
+  uint8_t ** indices = ((CompressionData*)A.optimizationData)->mtxIndL;
+  float ** matrixValues = ((CompressionData*)A.optimizationData)->matrixValues;
 #ifndef HPCG_NO_OPENMP
   #pragma omp parallel for
 #endif
   for (local_int_t i=0; i< nrow; i++)  {
     double sum = 0.0;
-    const double * const cur_vals = A.matrixValues[i];
-    const local_int_t * const cur_inds = A.mtxIndL[i];
+    const float * cur_vals = matrixValues[i];
+    const uint8_t * const cur_inds = indices[i];
+    int bitPosition = 0;
+    local_int_t cur_col = -1;
     const int cur_nnz = A.nonzerosInRow[i];
 
-    for (int j=0; j< cur_nnz; j++)
-      sum += cur_vals[j]*(double)xv[cur_inds[j]];
+    for (int j=0; j< cur_nnz; j++) {
+      DecodeNextIndex(cur_inds, bitPosition, cur_col);
+      sum += cur_vals[j]*(double)xv[cur_col];
+    }
     yv[i] = sum;
   }
   return 0;
