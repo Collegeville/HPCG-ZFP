@@ -1,3 +1,5 @@
+This repository contains code used for Neil Lindquist's undergraduate Thesis project, "Reducing Memory Access Latencies using Data Compression in Sparse Iterative Linear Solvers."  The implementations are located in their respective branches
+
 ####################################################
 High Performance Conjugate Gradient Benchmark (HPCG)
 ####################################################
