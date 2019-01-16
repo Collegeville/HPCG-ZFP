@@ -105,7 +105,7 @@ void ExchangeHalo(const SparseMatrix & A, Vector<T> & x) {
     // TODO: Thread this loop
     for (int i = 0; i < num_neighbors; i++) {
       local_int_t n_recv = receiveLength[i];
-      MPI_Irecv(x_external, n_recv, MPI_FLOAT, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
+      MPI_Irecv(x_external, n_recv, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD, request+i);
       x_external += n_recv;
     }
 
@@ -124,7 +124,7 @@ void ExchangeHalo(const SparseMatrix & A, Vector<T> & x) {
     // TODO: Thread this loop
     for (int i = 0; i < num_neighbors; i++) {
       local_int_t n_send = sendLength[i];
-      MPI_Send(sendBuffer, n_send, MPI_FLOAT, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD);
+      MPI_Send(sendBuffer, n_send, MPI_DOUBLE, neighbors[i], MPI_MY_TAG, MPI_COMM_WORLD);
       sendBuffer += n_send;
     }
   }

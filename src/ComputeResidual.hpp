@@ -58,17 +58,17 @@ int ComputeResidual(const local_int_t n, const Vector<T> & v1, const Vector<U> &
     #pragma omp for
     for (local_int_t i=0; i<n; i++) {
       double diff = std::fabs(v1v[i] - v2v[i]);
-      if (diff > threadlocal_residual) threadlocal_residual = diff;
+      threadlocal_residual += diff*diff;
     }
     #pragma omp critical
     {
-      if (threadlocal_residual>local_residual) local_residual = threadlocal_residual;
+      local_residual += threadlocal_residual;
     }
   }
 #else // No threading
   for (local_int_t i=0; i<n; i++) {
     double diff = std::fabs(v1v[i] - v2v[i]);
-    if (diff > local_residual) local_residual = diff;
+    local_residual += diff*diff;
 #ifdef HPCG_DETAILED_DEBUG
     HPCG_fout << " Computed, exact, diff = " << v1v[i] << " " << v2v[i] << " " << diff << std::endl;
 #endif
@@ -78,11 +78,13 @@ int ComputeResidual(const local_int_t n, const Vector<T> & v1, const Vector<U> &
 #ifndef HPCG_NO_MPI
   // Use MPI's reduce function to collect all partial sums
   double global_residual = 0;
-  MPI_Allreduce(&local_residual, &global_residual, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_residual, &global_residual, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   residual = global_residual;
 #else
   residual = local_residual;
 #endif
+
+  residual = std::sqrt(residual);
 
   return 0;
 }

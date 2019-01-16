@@ -30,7 +30,7 @@ struct MGData_STRUCT {
   int numberOfPostsmootherSteps; // Call ComputeSYMGS this many times after coarsening
   local_int_t * f2cOperator; //!< 1D array containing the fine operator local IDs that will be injected into coarse space.
   Vector<double> * rc; // coarse grid residual vector
-  Vector<float> * xc; // coarse grid solution vector
+  Vector<x_type> * xc; // coarse grid solution vector
   Vector<double> * Axf; // fine grid residual vector
   /*!
    This is for storing optimized data structres created in OptimizeProblem and
@@ -47,7 +47,7 @@ typedef struct MGData_STRUCT MGData;
  @param[in] f2cOperator -
  @param[out] data the data structure for CG vectors that will be allocated to get it ready for use in CG iterations
  */
-inline void InitializeMGData(local_int_t * f2cOperator, Vector<double> * rc, Vector<float> * xc, Vector<double> * Axf, MGData & data) {
+inline void InitializeMGData(local_int_t * f2cOperator, Vector<double> * rc, Vector<x_type> * xc, Vector<double> * Axf, MGData & data) {
   data.numberOfPresmootherSteps = 1;
   data.numberOfPostsmootherSteps = 1;
   data.f2cOperator = f2cOperator; // Space for injection operator

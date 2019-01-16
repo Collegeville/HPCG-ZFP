@@ -90,7 +90,7 @@ void GenerateCoarseProblem(const SparseMatrix & Af) {
   GenerateProblem(*Ac, 0, 0, 0);
   SetupHalo(*Ac);
   Vector<double> *rc = new Vector<double>;
-  Vector<float>  *xc = new Vector<float>;
+  Vector<x_type>  *xc = new Vector<x_type>;
   Vector<double> * Axf = new Vector<double>;
   InitializeVector(*rc, Ac->localNumberOfRows);
   InitializeVector(*xc, Ac->localNumberOfColumns);

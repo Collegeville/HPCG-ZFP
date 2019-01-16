@@ -37,7 +37,7 @@ template<class T>
 int ComputeProlongation(const SparseMatrix & Af, Vector<T> & xf) {
 
   T * xfv = (T*)xf.optimizationData;
-  float * xcv = (float*)Af.mgData->xc->optimizationData;
+  x_type * xcv = (x_type*)Af.mgData->xc->optimizationData;
   local_int_t * f2c = Af.mgData->f2cOperator;
   local_int_t nc = Af.mgData->rc->localLength;
 

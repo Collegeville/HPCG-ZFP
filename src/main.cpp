@@ -346,8 +346,8 @@ int main(int argc, char * argv[]) {
 #ifdef HPCG_DEBUG
   double residual = 0;
   ierr = ComputeResidual(A.localNumberOfRows, x, xexact, residual);
-  if (ierr) HPCG_fout << "Error in call to compute_residual: " << ierr << ".\n" << endl;
-  if (rank==0) HPCG_fout << "Difference between computed and exact  = " << residual << ".\n" << endl;
+  if (ierr) std::cout << "Error in call to compute_residual: " << ierr << ".\n" << endl;
+  if (rank==0) std::cout << "Difference between computed and exact  = " << residual << ".\n" << endl;
 #endif
 
   // Test Norm Results
